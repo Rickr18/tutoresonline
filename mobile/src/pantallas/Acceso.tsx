@@ -7,6 +7,7 @@ import { Alerta, Boton, Campo, Segmentos, mensajeDe } from '../ui';
 import { C, e } from '../tema';
 import Recuperar from './Recuperar';
 import { AvisoInstalar, EnlaceVersionWeb } from '../instalar';
+import { CasillaTerminos, EnlacesLegales } from '../legal';
 
 const DEMOS = [
   { rol: 'Estudiante', email: 'ana@demo.co' },
@@ -26,6 +27,7 @@ export default function Acceso() {
   const [ajustesServidor, setAjustesServidor] = useState(__DEV__);
   const [toquesLogo, setToquesLogo] = useState(0);
   const [recuperando, setRecuperando] = useState(false);
+  const [acepta, setAcepta] = useState(false);
   useEffect(() => { setServidor(almacen.servidor()); }, []);
 
   const enviar = useMutation({
@@ -33,7 +35,7 @@ export default function Acceso() {
       await almacen.guardarServidor(servidor);
       const r = await api<{ token: string; usuario: Usuario }>(
         modo === 'entrar' ? '/auth/login' : '/auth/registro',
-        modo === 'entrar' ? datos : { ...datos, nombre: nombre.trim(), rol },
+        modo === 'entrar' ? datos : { ...datos, nombre: nombre.trim(), rol, aceptaTerminos: acepta },
       );
       if (r.usuario.rol === 'ADMIN' || r.usuario.rol === 'SOPORTE') throw new Error('El equipo de soporte y administración trabaja desde la versión web.');
       return r;
@@ -69,8 +71,9 @@ export default function Acceso() {
           <Campo etiqueta="Correo electrónico" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
           <Campo etiqueta="Contraseña" value={password} onChangeText={setPassword} secureTextEntry
             ayuda={modo === 'registro' ? 'Mínimo 8 caracteres, con letras y números.' : undefined} />
+          {modo === 'registro' && <CasillaTerminos marcada={acepta} cambiar={setAcepta} />}
           {enviar.isError && <Alerta>{mensajeDe(enviar.error)}</Alerta>}
-          <Boton texto={modo === 'entrar' ? 'Ingresar' : 'Crear cuenta'} cargando={enviar.isPending}
+          <Boton texto={modo === 'entrar' ? 'Ingresar' : 'Crear cuenta'} cargando={enviar.isPending} deshabilitado={modo === 'registro' && !acepta}
             alPresionar={() => enviar.mutate({ email: email.trim(), password })} />
           {modo === 'entrar' && (
             <Pressable onPress={() => setRecuperando(true)} accessibilityRole="button" style={{ alignSelf: 'center', padding: 4 }}>
@@ -94,6 +97,7 @@ export default function Acceso() {
             </View>
           )}
 
+          <EnlacesLegales />
           <AvisoInstalar />
           <EnlaceVersionWeb />
 

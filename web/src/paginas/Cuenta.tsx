@@ -4,7 +4,8 @@ import { api, type Usuario } from '../api';
 import { useSesion } from '../sesion';
 import { Cabecera } from '../comunes';
 import { mensajeDe } from '../ui';
-import { iniciales, ROL_TEXTO } from '../formato';
+import { fechaHora, iniciales, ROL_TEXTO } from '../formato';
+import { Link } from 'react-router-dom';
 import { MARINO } from '../tema';
 import { abrirAppMovil, esIphone } from '../qr';
 
@@ -85,6 +86,12 @@ export default function Cuenta() {
                   <span>{ROL_TEXTO[usuario.rol]}</span>
                   {usuario.superior && <Tag color="gold">Administrador principal</Tag>}
                 </Flex>
+                <Typography.Paragraph type="secondary" style={{ margin: '10px 0 0', fontSize: 13 }}>
+                  {usuario.terminosAceptadosEn
+                    ? <>Aceptaste los términos y la política de datos (versión {usuario.terminosVersion}) el {fechaHora(usuario.terminosAceptadosEn)}. </>
+                    : null}
+                  <Link to="/terminos" target="_blank">Términos</Link> · <Link to="/privacidad" target="_blank">Privacidad</Link>
+                </Typography.Paragraph>
               </div>
             </Flex>
           </Card>

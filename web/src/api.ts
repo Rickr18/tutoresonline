@@ -30,6 +30,8 @@ export interface Usuario {
   superior?: boolean;
   /** Un administrador restableció la contraseña y hay que cambiarla antes de seguir. */
   debeCambiarPassword?: boolean;
+  /** Versión de los términos y la política de datos que aceptó al registrarse, y cuándo. */
+  terminosVersion?: string; terminosAceptadosEn?: string;
 }
 
 export interface Pago {

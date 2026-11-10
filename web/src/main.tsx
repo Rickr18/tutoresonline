@@ -13,6 +13,7 @@ import { Cargando } from './ui';
 import Acceso from './paginas/Acceso';
 import Descargar from './paginas/Descargar';
 import Recuperar from './paginas/Recuperar';
+import { Privacidad, Terminos } from './paginas/Legal';
 import InicioEstudiante from './paginas/estudiante/Inicio';
 import InicioSoporte from './paginas/gestion/Inicio';
 import Cuenta, { CambioObligatorio } from './paginas/Cuenta';
@@ -54,6 +55,9 @@ function Rutas() {
   if (pathname === '/descargar') return <Descargar />;
   // Recuperar la contraseña con un código; también es pública.
   if (pathname === '/recuperar') return <Recuperar />;
+  // Términos y política de datos: públicas, también las abre la app móvil.
+  if (pathname === '/terminos') return <Terminos />;
+  if (pathname === '/privacidad') return <Privacidad />;
   if (cargando) return <div className="pantalla-completa"><Cargando texto="Abriendo TutoresOn-Line…" /></div>;
   if (!usuario) return <Routes><Route path="*" element={<Acceso />} /></Routes>;
   if (usuario.debeCambiarPassword) return <CambioObligatorio />;

@@ -5,7 +5,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { tx, uno, todos, ejecutar, sembrar } from './db.js';
+import { tx, uno, todos, ejecutar, sembrar, VERSION_TERMINOS } from './db.js';
 import {
   ErrorHttp, texto, entero, opcion, firmar, autenticar, soloRol, montarTiempoReal, emitir, notificar, avisarSesion,
   vistaTutor, tutorPorId, buscarTutores, franjasLibres, franjaDisponible, validarPago, cobrar, reembolsar,
@@ -45,6 +45,7 @@ function perfilPropio(u: Usuario) {
     id: u.id, nombre: u.nombre, email: u.email, rol: u.rol,
     ...(u.superior ? { superior: true } : {}),
     ...(u.debe_cambiar ? { debeCambiarPassword: true } : {}),
+    ...(u.terminos_version ? { terminosVersion: u.terminos_version, terminosAceptadosEn: u.terminos_aceptados_en } : {}),
   };
   if (u.rol !== 'TUTOR') return base;
   return {
@@ -64,10 +65,14 @@ api.post('/auth/registro', (req, res) => {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new ErrorHttp(400, 'El correo no es válido.');
   const password = validarClave(req.body.password);
   if (uno('SELECT 1 AS x FROM usuarios WHERE email = ?', email)) throw new ErrorHttp(409, 'Ya existe una cuenta con ese correo.');
+  // Autorización previa, expresa e informada para el tratamiento de datos (Ley 1581 de 2012, Decreto 1377 de 2013).
+  if (req.body.aceptaTerminos !== true) throw new ErrorHttp(400, 'Debes aceptar los términos y condiciones y la política de tratamiento de datos.');
 
   const id = tx(() => {
-    const nuevo = Number(ejecutar('INSERT INTO usuarios (nombre, email, password_hash, rol, creado_en) VALUES (?,?,?,?,?)',
-      nombre, email, bcrypt.hashSync(password, 10), rol, ahoraIso()).lastInsertRowid);
+    const ahora = ahoraIso();
+    const nuevo = Number(ejecutar(`INSERT INTO usuarios (nombre, email, password_hash, rol, creado_en, terminos_version, terminos_aceptados_en)
+                                   VALUES (?,?,?,?,?,?,?)`,
+      nombre, email, bcrypt.hashSync(password, 10), rol, ahora, VERSION_TERMINOS, ahora).lastInsertRowid);
     if (rol === 'TUTOR') ejecutar('INSERT INTO tutores (usuario_id) VALUES (?)', nuevo);
     notificar(nuevo, 'Cuenta creada', rol === 'TUTOR'
       ? 'Completa tu perfil y envíalo a verificación para empezar a recibir reservas.'

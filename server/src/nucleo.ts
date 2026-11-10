@@ -48,8 +48,9 @@ export function opcion<T extends string>(v: unknown, campo: string, validas: rea
 export type Usuario = {
   id: number; nombre: string; email: string; rol: 'ESTUDIANTE' | 'TUTOR' | 'SOPORTE' | 'ADMIN'; estado: string;
   superior: number; debe_cambiar: number; version_token: number;
+  terminos_version: string | null; terminos_aceptados_en: string | null;
 };
-export const COLUMNAS_USUARIO = 'id, nombre, email, rol, estado, superior, debe_cambiar, version_token';
+export const COLUMNAS_USUARIO = 'id, nombre, email, rol, estado, superior, debe_cambiar, version_token, terminos_version, terminos_aceptados_en';
 export const esEquipo = (u: Usuario) => u.rol === 'ADMIN' || u.rol === 'SOPORTE';
 declare global {
   namespace Express { interface Request { yo: Usuario } }

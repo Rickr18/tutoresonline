@@ -148,3 +148,9 @@ ul { list-style: none; margin: 0; padding: 0; }
   .fila-sesion .precio { grid-column: 3; grid-row: 1; text-align: right; }
   .burbuja { max-width: 100%; }
 }
+
+/* ---------- Parte legal ---------- */
+.acepta-terminos { font-size: 13px; line-height: 1.45; }
+.acepta-terminos a, .enlaces-legales a { color: var(--marino); font-weight: 600; text-decoration: underline; }
+.enlaces-legales { text-align: center; font-size: 13px; }
+.legal section + section { margin-top: 6px; }

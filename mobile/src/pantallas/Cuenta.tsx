@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { almacen, api, ES_WEB, SERVIDOR_POR_DEFECTO, type Notificaciones } from '../api';
 import { AvisoInstalar, EnlaceVersionWeb } from '../instalar';
+import { EnlacesLegales } from '../legal';
 import { Pantalla } from '../comunes';
 import { useNav } from '../nav';
 import { useSesion } from '../sesion';
@@ -78,6 +79,7 @@ export default function Cuenta() {
       <Boton texto="Cambiar contraseña" variante="oscuro" alPresionar={() => setCambiando(true)} />
       <Boton texto="Cerrar sesión" variante="fantasma" alPresionar={salir} />
       <EnlaceVersionWeb />
+      <EnlacesLegales />
       {cambiando && (
         <Hoja titulo="Cambiar contraseña" cerrar={() => setCambiando(false)}>
           <FormularioClave alTerminar={() => setCambiando(false)} />

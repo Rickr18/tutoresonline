@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Qr, urlDescarga } from '../qr';
 import { api, type Usuario } from '../api';
 import { useSesion } from '../sesion';
-import { Button, Flex, Form, Input, Segmented, Tabs, Typography } from 'antd';
+import { Button, Checkbox, Flex, Form, Input, Segmented, Tabs, Typography } from 'antd';
 import { Alerta, Campo, mensajeDe } from '../ui';
 
 const DEMOS = [
@@ -21,12 +21,13 @@ export default function Acceso() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rol, setRol] = useState<'ESTUDIANTE' | 'TUTOR'>('ESTUDIANTE');
+  const [acepta, setAcepta] = useState(false);
 
   const enviar = useMutation({
     mutationFn: (datos: { email: string; password: string }) =>
       api<{ token: string; usuario: Usuario }>(
         modo === 'entrar' ? '/auth/login' : '/auth/registro',
-        modo === 'entrar' ? datos : { ...datos, nombre, rol },
+        modo === 'entrar' ? datos : { ...datos, nombre, rol, aceptaTerminos: acepta },
       ),
     onSuccess: (r) => entrar(r.token, r.usuario),
   });
@@ -74,8 +75,15 @@ export default function Acceso() {
             <Input.Password id="acceso-clave" size="large" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={modo === 'registro' ? 8 : 1}
               autoComplete={modo === 'entrar' ? 'current-password' : 'new-password'} />
           </Campo>
+          {modo === 'registro' && (
+            <Checkbox id="acceso-terminos" className="acepta-terminos" checked={acepta} onChange={(e) => setAcepta(e.target.checked)}>
+              Acepto los <Link to="/terminos" target="_blank">Términos y condiciones</Link> y autorizo el tratamiento de mis datos según
+              la <Link to="/privacidad" target="_blank">Política de privacidad</Link>. Si soy menor de edad, cuento con la autorización de mi
+              padre, madre o acudiente.
+            </Checkbox>
+          )}
           {enviar.isError && <Alerta>{mensajeDe(enviar.error)}</Alerta>}
-          <Button type="primary" htmlType="submit" size="large" block loading={enviar.isPending}>
+          <Button type="primary" htmlType="submit" size="large" block loading={enviar.isPending} disabled={modo === 'registro' && !acepta}>
             {modo === 'entrar' ? 'Ingresar' : 'Crear cuenta'}
           </Button>
           {modo === 'registro' && rol === 'TUTOR' && (
@@ -97,6 +105,9 @@ export default function Acceso() {
           </div>
         )}
 
+        <Typography.Text type="secondary" className="enlaces-legales">
+          <Link to="/terminos">Términos y condiciones</Link> · <Link to="/privacidad">Política de privacidad</Link>
+        </Typography.Text>
         <Typography.Text type="secondary" className="descarga-movil">¿Estás en el teléfono? <Link to="/descargar">Instala la app</Link></Typography.Text>
       </section>
     </div>

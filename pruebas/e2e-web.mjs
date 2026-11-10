@@ -191,6 +191,7 @@ try {
   await nuevo.getByLabel('Nombre completo').fill('Mariana Herrera');
   await nuevo.getByLabel('Correo electrónico').fill(`mariana${Date.now()}@demo.co`);
   await nuevo.getByLabel('Contraseña').fill('Clave2026');
+  await nuevo.locator('#acceso-terminos').check();
   await nuevo.getByRole('button', { name: 'Crear cuenta' }).last().click();
   await nuevo.getByText('Completa tu perfil para empezar').first().waitFor();
   await nuevo.goto(`${URL}/perfil`);
@@ -306,6 +307,33 @@ try {
     await p.locator('.barra').waitFor();
     await ctx.close();
     ok('recuperar la contraseña con el código y entrar sin pasar por un administrador');
+  }
+
+  // Registro con la aceptación de los términos y páginas legales públicas
+  {
+    const ctx = await navegador.newContext({ viewport: { width: 1360, height: 860 } });
+    const p = await ctx.newPage();
+    p.on('pageerror', (e) => errores.push(`[registro] ${e.message}`));
+    await p.goto(`${URL}/terminos`);
+    await p.getByRole('heading', { name: 'Términos y condiciones' }).waitFor();
+    await foto(p, 'web-18-terminos');
+    await p.getByRole('link', { name: 'Ver la política de tratamiento de datos' }).click();
+    await p.getByRole('heading', { name: 'Política de tratamiento de datos personales' }).waitFor();
+    await p.goto(URL);
+    await p.getByRole('tab', { name: 'Crear cuenta' }).click();
+    await p.getByLabel('Nombre completo').fill('Camila Ortega');
+    await p.getByLabel('Correo electrónico').fill(`camila${Date.now()}@demo.co`);
+    await p.getByLabel('Contraseña').fill('Camila2026');
+    const crear = p.getByRole('button', { name: 'Crear cuenta' });
+    if (await crear.isEnabled()) throw new Error('Se puede crear la cuenta sin aceptar los términos.');
+    await p.locator('#acceso-terminos').check();
+    await foto(p, 'web-19-registro-terminos');
+    await crear.click();
+    await p.locator('.barra').waitFor();
+    await p.goto(`${URL}/cuenta`);
+    await p.getByText('Aceptaste los términos y la política de datos', { exact: false }).waitFor();
+    await ctx.close();
+    ok('registro solo con la casilla de términos marcada; las páginas legales cargan sin sesión');
   }
 
   // Pantalla angosta

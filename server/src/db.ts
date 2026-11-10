@@ -11,10 +11,13 @@ export const db = new DatabaseSync(archivo);
 db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
 
 /** Carpeta de los archivos que se adjuntan en los casos de soporte. */
+/** Versión vigente de los términos y la política de datos (las páginas /terminos y /privacidad de la web). */
+export const VERSION_TERMINOS = '2026-11-10';
+
 export const CARPETA_ADJUNTOS = path.join(path.dirname(archivo), 'adjuntos');
 
 // Si la base viene de una versión anterior del esquema se recrea: son datos de demostración.
-const VERSION_ESQUEMA = 4;
+const VERSION_ESQUEMA = 5;
 if ((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version !== VERSION_ESQUEMA) {
   db.exec('PRAGMA foreign_keys = OFF;');
   for (const t of ['recuperaciones', 'solicitudes_materia', 'auditoria', 'eventos', 'disputa_mensajes', 'adjuntos', 'notificaciones', 'disputas', 'calificaciones', 'pagos',
@@ -39,6 +42,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
   debe_cambiar INTEGER NOT NULL DEFAULT 0,
   -- Va dentro del token; al subirla se cierran las sesiones abiertas de la cuenta.
   version_token INTEGER NOT NULL DEFAULT 0,
+  -- Aceptación de los términos y la política de datos al registrarse (Ley 1581 de 2012): versión y fecha.
+  terminos_version TEXT,
+  terminos_aceptados_en TEXT,
   creado_en TEXT NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_superior ON usuarios(superior) WHERE superior = 1;
@@ -263,8 +269,9 @@ export function sembrar() {
     for (const [n, a] of materias) ejecutar('INSERT INTO materias (nombre, area) VALUES (?,?)', n, a);
 
     const usuario = (nombre: string, email: string, rol: string) =>
-      Number(ejecutar('INSERT INTO usuarios (nombre,email,password_hash,rol,creado_en) VALUES (?,?,?,?,?)',
-        nombre, email, clave, rol, iso(haceDias(40))).lastInsertRowid);
+      Number(ejecutar(`INSERT INTO usuarios (nombre,email,password_hash,rol,creado_en,terminos_version,terminos_aceptados_en)
+                       VALUES (?,?,?,?,?,?,?)`,
+        nombre, email, clave, rol, iso(haceDias(40)), ...(rol === 'ESTUDIANTE' || rol === 'TUTOR' ? [VERSION_TERMINOS, iso(haceDias(40))] : [null, null])).lastInsertRowid);
 
     const rick = usuario('Rick Rios', 'rick@tutores.co', 'ADMIN');
     ejecutar('UPDATE usuarios SET superior = 1 WHERE id = ?', rick);

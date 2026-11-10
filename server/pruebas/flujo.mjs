@@ -21,12 +21,17 @@ check('sin token 401', (await api('GET', '/yo')).s === 401);
 
 // Registro
 const correo = `nuevo${Date.now()}@demo.co`;
-let r = await api('POST', '/auth/registro', null, { nombre: 'Nuevo Usuario', email: correo, password: 'Clave1234', rol: 'ESTUDIANTE' });
+let r = await api('POST', '/auth/registro', null, { nombre: 'Nuevo Usuario', email: correo, password: 'Clave1234', rol: 'ESTUDIANTE', aceptaTerminos: true });
 check('registro', r.s === 200 || r.s === 201, JSON.stringify(r));
-r = await api('POST', '/auth/registro', null, { nombre: 'Nuevo Usuario', email: correo, password: 'Clave1234', rol: 'ESTUDIANTE' });
+r = await api('POST', '/auth/registro', null, { nombre: 'Nuevo Usuario', email: correo, password: 'Clave1234', rol: 'ESTUDIANTE', aceptaTerminos: true });
 check('registro duplicado 409', r.s === 409, JSON.stringify(r));
-r = await api('POST', '/auth/registro', null, { nombre: 'X Y', email: 'a' + correo, password: 'corta', rol: 'ESTUDIANTE' });
+r = await api('POST', '/auth/registro', null, { nombre: 'X Y', email: 'a' + correo, password: 'corta', rol: 'ESTUDIANTE', aceptaTerminos: true });
 check('clave débil 400', r.s === 400, JSON.stringify(r));
+r = await api('POST', '/auth/registro', null, { nombre: 'Sin Aceptar', email: 'b' + correo, password: 'Clave1234', rol: 'ESTUDIANTE' });
+check('registro sin aceptar los términos 400', r.s === 400 && /términos/.test(r.d.error), JSON.stringify(r));
+r = await api('POST', '/auth/login', null, { email: correo, password: 'Clave1234' });
+check('la cuenta nueva guarda la versión y la fecha de aceptación', r.d.usuario?.terminosVersion === '2026-11-10' && !!r.d.usuario?.terminosAceptadosEn, JSON.stringify(r.d.usuario));
+check('las cuentas sembradas traen la aceptación', !!ana.usuario.terminosVersion && !!carlos.usuario.terminosVersion, JSON.stringify(ana.usuario));
 
 // Búsqueda
 r = await api('GET', '/tutores', ana.token);
