@@ -7,6 +7,7 @@ import { useSesion } from '../../sesion';
 import { Cabecera, useMaterias } from '../../comunes';
 import { Alerta, Campo, Insignia, mensajeDe } from '../../ui';
 import { dinero, MODALIDAD, VERIFICACION } from '../../formato';
+import SolicitudesMateria from './SolicitudesMateria';
 
 export default function Perfil() {
   const { usuario, refrescar, avisar } = useSesion();
@@ -100,6 +101,7 @@ export default function Perfil() {
             <Typography.Text type="secondary" style={{ fontSize: 13 }}>Los cambios se publican de inmediato si tu perfil ya está aprobado.</Typography.Text>
           </Form>
         </Card>
+        <SolicitudesMateria />
       </Space>
     </div>
   );

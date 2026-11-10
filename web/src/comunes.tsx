@@ -32,6 +32,9 @@ export function cuando(s: Sesion) {
   return s.inicio ? fechaHora(s.inicio) : `Pedida ${fechaHora(s.creadoEn).toLowerCase()}`;
 }
 
+/** La sesión tiene una disputa sin resolver: el pago está congelado y hay conversación con soporte. */
+export const casoAbierto = (s: Sesion) => !!s.disputa && s.disputa.estado !== 'RESUELTA';
+
 export function FilaSesion({ s }: { s: Sesion }) {
   const { usuario } = useSesion();
   const soyTutor = usuario?.rol === 'TUTOR';
@@ -49,7 +52,10 @@ export function FilaSesion({ s }: { s: Sesion }) {
         <span>{duracion(s.duracionMin)} · {s.modalidad === 'VIRTUAL' ? 'Virtual' : 'Presencial'}{s.tipo === 'BAJO_DEMANDA' ? ' · Bajo demanda' : ''}</span>
       </span>
       <span className="precio">{dinero(soyTutor ? s.pago?.netoTutor ?? null : s.precio)}</span>
-      <Insignia tono={e.tono}>{e.texto}</Insignia>
+      <span className="estados">
+        <Insignia tono={e.tono}>{e.texto}</Insignia>
+        {casoAbierto(s) && <Insignia tono="mal">Caso de soporte abierto</Insignia>}
+      </span>
     </Link>
   );
 }

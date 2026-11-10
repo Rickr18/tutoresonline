@@ -10,6 +10,7 @@ import { haceCuanto, ROL_TEXTO } from './formato';
 
 const MENU: Record<Rol, { a: string; texto: string; fin?: boolean }[]> = {
   ESTUDIANTE: [
+    { a: '/inicio', texto: 'Inicio' },
     { a: '/buscar', texto: 'Buscar tutor' },
     { a: '/ahora', texto: 'Tutor ahora' },
     { a: '/sesiones', texto: 'Mis sesiones' },
@@ -22,6 +23,7 @@ const MENU: Record<Rol, { a: string; texto: string; fin?: boolean }[]> = {
     { a: '/perfil', texto: 'Perfil' },
   ],
   SOPORTE: [
+    { a: '/inicio', texto: 'Inicio' },
     { a: '/casos', texto: 'Casos' },
     { a: '/gestion/sesiones', texto: 'Sesiones' },
   ],

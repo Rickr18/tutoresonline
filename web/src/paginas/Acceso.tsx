@@ -70,7 +70,7 @@ export default function Acceso() {
           <Campo etiqueta="Correo electrónico" id="acceso-email">
             <Input id="acceso-email" size="large" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
           </Campo>
-          <Campo etiqueta="Contraseña" id="acceso-clave" ayuda={modo === 'registro' ? 'Mínimo 8 caracteres, con letras y números.' : undefined}>
+          <Campo etiqueta="Contraseña" id="acceso-clave" ayuda={modo === 'registro' ? 'Mínimo 8 caracteres, con letras y números.' : <Link to="/recuperar">¿Olvidaste tu contraseña?</Link>}>
             <Input.Password id="acceso-clave" size="large" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={modo === 'registro' ? 8 : 1}
               autoComplete={modo === 'entrar' ? 'current-password' : 'new-password'} />
           </Campo>

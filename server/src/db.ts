@@ -14,10 +14,10 @@ db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
 export const CARPETA_ADJUNTOS = path.join(path.dirname(archivo), 'adjuntos');
 
 // Si la base viene de una versión anterior del esquema se recrea: son datos de demostración.
-const VERSION_ESQUEMA = 3;
+const VERSION_ESQUEMA = 4;
 if ((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version !== VERSION_ESQUEMA) {
   db.exec('PRAGMA foreign_keys = OFF;');
-  for (const t of ['auditoria', 'eventos', 'disputa_mensajes', 'adjuntos', 'notificaciones', 'disputas', 'calificaciones', 'pagos',
+  for (const t of ['recuperaciones', 'solicitudes_materia', 'auditoria', 'eventos', 'disputa_mensajes', 'adjuntos', 'notificaciones', 'disputas', 'calificaciones', 'pagos',
     'demanda_descartes', 'sesiones', 'disponibilidad', 'tutor_materias', 'tutores', 'materias', 'usuarios'])
     db.exec(`DROP TABLE IF EXISTS ${t}`);
   fs.rmSync(CARPETA_ADJUNTOS, { recursive: true, force: true });
@@ -57,6 +57,30 @@ CREATE TABLE IF NOT EXISTS auditoria (
   creado_en TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_auditoria_fecha ON auditoria(creado_en);
+-- Un tutor pide una materia que no está en el catálogo; un administrador la aprueba (la crea y se la asigna) o la rechaza.
+CREATE TABLE IF NOT EXISTS solicitudes_materia (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tutor_id INTEGER NOT NULL REFERENCES usuarios(id),
+  nombre TEXT NOT NULL,
+  area TEXT NOT NULL,
+  motivo TEXT NOT NULL DEFAULT '',
+  estado TEXT NOT NULL DEFAULT 'PENDIENTE' CHECK (estado IN ('PENDIENTE','APROBADA','RECHAZADA')),
+  respuesta TEXT,
+  materia_id INTEGER REFERENCES materias(id),
+  resuelta_por INTEGER REFERENCES usuarios(id),
+  resuelta_en TEXT,
+  creado_en TEXT NOT NULL
+);
+-- Recuperación de contraseña con un código de 6 dígitos (en producción llegaría por correo).
+CREATE TABLE IF NOT EXISTS recuperaciones (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+  codigo_hash TEXT NOT NULL,
+  intentos INTEGER NOT NULL DEFAULT 0,
+  usado INTEGER NOT NULL DEFAULT 0,
+  expira_en TEXT NOT NULL,
+  creado_en TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS tutores (
   usuario_id INTEGER PRIMARY KEY REFERENCES usuarios(id),
   bio TEXT NOT NULL DEFAULT '',
@@ -402,6 +426,11 @@ export function sembrar() {
     for (const d of [7, 3])
       ejecutar(`INSERT INTO sesiones (estudiante_id,materia_id,tipo,estado,duracion_min,tema,creado_en)
         VALUES (?,?,?,?,?,?,?)`, luis, 6, 'BAJO_DEMANDA', 'SIN_TUTOR', 60, 'Duda de estequiometría', iso(haceDias(d, 3)));
+
+    // Una solicitud de materia pendiente, para que el administrador vea cómo funcionan.
+    const paola = uno<{ id: number }>('SELECT id FROM usuarios WHERE email = ?', 'paola@demo.co')!.id;
+    ejecutar('INSERT INTO solicitudes_materia (tutor_id, nombre, area, motivo, creado_en) VALUES (?,?,?,?,?)', paola,
+      'Microeconomía', 'Negocios', 'Varios estudiantes de contaduría me piden refuerzo en oferta, demanda y elasticidad.', iso(haceDias(1, 14)));
 
     ejecutar('INSERT INTO notificaciones (usuario_id,titulo,cuerpo,creado_en) VALUES (?,?,?,?)', ana,
       'Bienvenida a TutoresOn-Line', 'Busca un tutor por materia o pide uno ahora mismo.', ahora);

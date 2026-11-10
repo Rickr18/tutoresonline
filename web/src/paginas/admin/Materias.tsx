@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, AutoComplete, Button, Form, Input, Modal, Space, Table, Tag, Typography } from 'antd';
+import { Alert, AutoComplete, Badge, Button, Flex, Form, Input, Modal, Space, Table, Tabs, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { api, type MateriaAdmin } from '../../api';
+import { api, type MateriaAdmin, type SolicitudMateria } from '../../api';
+import SolicitudesAdmin from './SolicitudesMateria';
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
 import { mensajeDe } from '../../ui';
@@ -43,6 +44,9 @@ export default function Materias() {
   const cola = useQueryClient();
   const { avisar } = useSesion();
   const materias = useQuery({ queryKey: ['admin', 'materias'], queryFn: () => api<MateriaAdmin[]>('/admin/materias') });
+  const solicitudes = useQuery({ queryKey: ['admin', 'solicitudes-materia'], queryFn: () => api<SolicitudMateria[]>('/admin/solicitudes-materia'), refetchInterval: 30_000 });
+  const pendientes = (solicitudes.data ?? []).filter((s) => s.estado === 'PENDIENTE').length;
+  const [pestana, setPestana] = useState<'catalogo' | 'solicitudes'>('catalogo');
   const [editando, setEditando] = useState<MateriaAdmin | null | undefined>(undefined);
 
   // Las búsquedas y los formularios usan ['materias']; se refrescan junto con la vista del admin.
@@ -80,8 +84,15 @@ export default function Materias() {
       </Cabecera>
       {materias.isError && <Alert type="error" showIcon title={mensajeDe(materias.error)} style={{ marginBottom: 16 }} />}
       {alternar.isError && <Alert type="error" showIcon title={mensajeDe(alternar.error)} style={{ marginBottom: 16 }} />}
-      <Table rowKey="id" columns={columnas} dataSource={materias.data ?? []} loading={materias.isPending} size="middle"
-        pagination={false} scroll={{ x: 'max-content' }} />
+      {solicitudes.isError && <Alert type="error" showIcon title={mensajeDe(solicitudes.error)} style={{ marginBottom: 16 }} />}
+      <Tabs activeKey={pestana} onChange={(k) => setPestana(k as typeof pestana)} items={[
+        { key: 'catalogo', label: 'Catálogo' },
+        { key: 'solicitudes', label: <Flex gap={8} align="center">Solicitudes de tutores<Badge count={pendientes} /></Flex> },
+      ]} />
+      {pestana === 'catalogo'
+        ? <Table rowKey="id" columns={columnas} dataSource={materias.data ?? []} loading={materias.isPending} size="middle"
+          pagination={false} scroll={{ x: 'max-content' }} />
+        : <SolicitudesAdmin solicitudes={solicitudes.data ?? []} cargando={solicitudes.isPending} areas={areas} />}
       {editando !== undefined && (
         <ModalMateria materia={editando} areas={areas} cerrar={() => setEditando(undefined)} refrescar={refrescar} />
       )}

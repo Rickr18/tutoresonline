@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, Switch, Text, TextInput, View } from 'react-native';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api, consulta, type Tutor } from '../api';
-import { Pantalla, useMaterias } from '../comunes';
+import { Pantalla, casoAbierto, useMaterias, useSesiones } from '../comunes';
 import { useNav } from '../nav';
 import { Alerta, Avatar, Boton, Cargando, Estrellas, Opciones, Vacio, mensajeDe } from '../ui';
 import { C, e } from '../tema';
@@ -33,6 +33,7 @@ function TarjetaTutor({ t }: { t: Tutor }) {
 
 export default function Buscar() {
   const nav = useNav();
+  const casos = (useSesiones().data ?? []).filter(casoAbierto);
   const materias = useMaterias();
   const [q, setQ] = useState('');
   const [materia, setMateria] = useState<number | ''>('');
@@ -47,6 +48,13 @@ export default function Buscar() {
 
   return (
     <Pantalla titulo="Buscar tutor" detalle="Todos los tutores publicados están verificados." refrescando={tutores.isRefetching} alRefrescar={() => tutores.refetch()}>
+      {casos.map((s) => (
+        <Pressable key={s.id} onPress={() => nav.ir({ nombre: 'sesion', id: s.id })} accessibilityRole="button">
+          <Alerta tono={s.disputa!.estado === 'ESCALADA' ? 'mal' : 'espera'} titulo={`Tu caso de soporte · ${s.materia.nombre}`}>
+            {s.disputa!.asignado ? `Lo revisa ${s.disputa!.asignado}, de soporte.` : 'Pronto alguien de soporte lo tomará.'} El pago está congelado hasta que se resuelva. Toca aquí para ver el caso y escribir a soporte.
+          </Alerta>
+        </Pressable>
+      ))}
       <Boton texto="Necesito un tutor ahora" alPresionar={() => nav.cambiarPestana('ahora')} />
       <TextInput style={e.entrada} placeholder="Nombre, materia o tema" placeholderTextColor="#9aa5b5" value={q} onChangeText={setQ}
         accessibilityLabel="Buscar" returnKeyType="search" />

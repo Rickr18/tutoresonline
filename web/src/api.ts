@@ -75,7 +75,7 @@ export interface Ingresos {
 
 export interface Resumen {
   estudiantes: number; tutoresAprobados: number; tutoresPendientes: number; tutoresEnLinea: number;
-  disputasAbiertas: number; disputasEscaladas: number; disputasSinAsignar: number; sesionesTotales: number; sesionesFinalizadas: number;
+  disputasAbiertas: number; disputasEscaladas: number; disputasSinAsignar: number; solicitudesMateria: number; sesionesTotales: number; sesionesFinalizadas: number;
   volumenPagado: number; comisiones: number; retenido: number;
   calificacionPromedio: number | null; tasaAsignacion: number | null;
   porEstado: { estado: EstadoSesion; total: number }[];
@@ -91,6 +91,12 @@ export interface UsuarioAdmin {
 }
 export interface EntradaAuditoria { id: number; accion: string; texto: string; fecha: string; actor: { id: number; nombre: string; superior: boolean } }
 export interface MateriaAdmin extends Materia { activa: boolean; tutores: number; sesiones: number }
+/** Pedido de un tutor para agregar una materia al catálogo. */
+export interface SolicitudMateria {
+  id: number; nombre: string; area: string; motivo: string; estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+  respuesta: string | null; creadoEn: string; resueltaEn: string | null; materiaId: number | null;
+  tutor?: { id: number; nombre: string; email: string }; resueltaPor?: string;
+}
 export interface PagoAdmin extends Pago { fecha: string; sesionId: number; estadoSesion: EstadoSesion; estudiante: string; tutor: string | null }
 export interface Persona { id: number; nombre: string; rol?: Rol }
 

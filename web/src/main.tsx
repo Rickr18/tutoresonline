@@ -12,6 +12,9 @@ import Marco, { Avisos } from './Marco';
 import { Cargando } from './ui';
 import Acceso from './paginas/Acceso';
 import Descargar from './paginas/Descargar';
+import Recuperar from './paginas/Recuperar';
+import InicioEstudiante from './paginas/estudiante/Inicio';
+import InicioSoporte from './paginas/gestion/Inicio';
 import Cuenta, { CambioObligatorio } from './paginas/Cuenta';
 import Actividad from './paginas/admin/Actividad';
 import MateriasAdmin from './paginas/admin/Materias';
@@ -42,13 +45,15 @@ const consultas = new QueryClient({
   },
 });
 
-const INICIO: Record<Rol, string> = { ESTUDIANTE: '/buscar', TUTOR: '/panel', SOPORTE: '/casos', ADMIN: '/admin' };
+const INICIO: Record<Rol, string> = { ESTUDIANTE: '/inicio', TUTOR: '/panel', SOPORTE: '/inicio', ADMIN: '/admin' };
 
 function Rutas() {
   const { usuario, cargando } = useSesion();
   const { pathname } = useLocation();
   // Página pública a la que lleva el QR; no necesita sesión.
   if (pathname === '/descargar') return <Descargar />;
+  // Recuperar la contraseña con un código; también es pública.
+  if (pathname === '/recuperar') return <Recuperar />;
   if (cargando) return <div className="pantalla-completa"><Cargando texto="Abriendo TutoresOn-Line…" /></div>;
   if (!usuario) return <Routes><Route path="*" element={<Acceso />} /></Routes>;
   if (usuario.debeCambiarPassword) return <CambioObligatorio />;
@@ -58,6 +63,7 @@ function Rutas() {
     <Routes>
       <Route element={<Marco />}>
         {usuario.rol === 'ESTUDIANTE' && <>
+          <Route path="/inicio" element={<InicioEstudiante />} />
           <Route path="/buscar" element={<Buscar />} />
           <Route path="/tutores/:id" element={<PerfilTutor />} />
           <Route path="/ahora" element={<Demanda />} />
@@ -73,6 +79,7 @@ function Rutas() {
           <Route path="/sesiones/:id" element={<SesionDetalle />} />
         </>}
         {(usuario.rol === 'SOPORTE' || usuario.rol === 'ADMIN') && <>
+          {usuario.rol === 'SOPORTE' && <Route path="/inicio" element={<InicioSoporte />} />}
           <Route path="/casos" element={<Casos />} />
           <Route path="/casos/:id" element={<Caso />} />
           <Route path="/gestion/sesiones" element={<SesionesEquipo />} />

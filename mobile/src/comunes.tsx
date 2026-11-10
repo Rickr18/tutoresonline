@@ -45,6 +45,9 @@ export function Pantalla({ titulo, detalle, atras, refrescando, alRefrescar, chi
   );
 }
 
+/** La sesión tiene una disputa sin resolver: el pago está congelado y hay conversación con soporte. */
+export const casoAbierto = (s: Sesion) => !!s.disputa && s.disputa.estado !== 'RESUELTA';
+
 export function FilaSesion({ s }: { s: Sesion }) {
   const { usuario } = useSesion();
   const nav = useNav();
@@ -65,6 +68,7 @@ export function FilaSesion({ s }: { s: Sesion }) {
           <Text style={e.pequeno}>{cuando(s)} · {duracion(s.duracionMin)}{s.tipo === 'BAJO_DEMANDA' ? ' · Ahora' : ''}</Text>
           <Insignia tono={est.tono} texto={est.texto} />
         </View>
+        {casoAbierto(s) && <Insignia tono="mal" texto="Caso de soporte abierto" />}
       </View>
     </Pressable>
   );

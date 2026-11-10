@@ -36,9 +36,10 @@ export default function Resumen() {
   return (
     <>
       <Cabecera titulo="Resumen de la plataforma" detalle="Indicadores en vivo de usuarios, sesiones y dinero que pasa por la plataforma." />
-      {(d.tutoresPendientes > 0 || d.disputasAbiertas > 0 || d.disputasEscaladas > 0) && (
+      {(d.tutoresPendientes > 0 || d.disputasAbiertas > 0 || d.disputasEscaladas > 0 || d.solicitudesMateria > 0) && (
         <Space orientation="vertical" style={{ width: '100%', marginBottom: 16 }}>
           {d.tutoresPendientes > 0 && <Alerta tono="espera">{d.tutoresPendientes} {d.tutoresPendientes === 1 ? 'perfil de tutor espera' : 'perfiles de tutor esperan'} verificación. <Link to="/admin/verificaciones">Revisar</Link></Alerta>}
+          {d.solicitudesMateria > 0 && <Alerta tono="espera">{d.solicitudesMateria} {d.solicitudesMateria === 1 ? 'tutor pide' : 'tutores piden'} agregar materias al catálogo. <Link to="/admin/materias">Revisar solicitudes</Link></Alerta>}
           {d.disputasEscaladas > 0 && <Alerta>{d.disputasEscaladas} {d.disputasEscaladas === 1 ? 'caso escalado espera' : 'casos escalados esperan'} tu decisión. <Link to="/casos">Ver casos</Link></Alerta>}
           {d.disputasAbiertas > 0 && <Alerta tono="info">{d.disputasAbiertas} {d.disputasAbiertas === 1 ? 'caso de soporte abierto' : 'casos de soporte abiertos'}, {d.disputasSinAsignar} sin asignar. <Link to="/casos">Supervisar</Link></Alerta>}
         </Space>

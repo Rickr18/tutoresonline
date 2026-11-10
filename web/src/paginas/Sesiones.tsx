@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge, Button, Flex, Tabs } from 'antd';
-import type { EstadoSesion } from '../api';
+import type { EstadoSesion, Sesion } from '../api';
 import { useSesion } from '../sesion';
-import { Cabecera, FilaSesion, useSesiones } from '../comunes';
+import { Cabecera, FilaSesion, casoAbierto, useSesiones } from '../comunes';
 import { Alerta, Cargando, Vacio, mensajeDe } from '../ui';
 
 const ACTIVAS: EstadoSesion[] = ['PENDIENTE_ACEPTACION', 'BUSCANDO_TUTOR', 'CONFIRMADA', 'EN_CURSO'];
@@ -15,9 +15,11 @@ export default function Sesiones() {
   const [pestana, setPestana] = useState<'activas' | 'historial'>('activas');
   const soyTutor = usuario?.rol === 'TUTOR';
 
-  const activas = (sesiones.data ?? []).filter((s) => ACTIVAS.includes(s.estado))
+  // Una sesión ya terminada con un caso de soporte sin resolver sigue "activa": hay algo pendiente en ella.
+  const esActiva = (s: Sesion) => ACTIVAS.includes(s.estado) || casoAbierto(s);
+  const activas = (sesiones.data ?? []).filter(esActiva)
     .sort((a, b) => Date.parse(a.inicio ?? a.creadoEn) - Date.parse(b.inicio ?? b.creadoEn));
-  const historial = (sesiones.data ?? []).filter((s) => !ACTIVAS.includes(s.estado))
+  const historial = (sesiones.data ?? []).filter((s) => !esActiva(s))
     .sort((a, b) => Date.parse(b.inicio ?? b.creadoEn) - Date.parse(a.inicio ?? a.creadoEn));
   const lista = pestana === 'activas' ? activas : historial;
   const rotulo = (texto: string, n: number) => <Flex gap={8} align="center">{texto}<Badge count={n} showZero color="#e9edf3" style={{ color: '#4a5567' }} /></Flex>;

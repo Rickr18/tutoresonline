@@ -278,5 +278,48 @@ check('CSV solo para admin', (await fetch(B + '/admin/exportar/pagos.csv', { hea
 r = await api('GET', '/admin/auditoria', admin.token);
 const acciones = r.d.map(a => a.accion);
 check('la bitácora registra las acciones', ['CUENTA_CREADA', 'PASSWORD_RESTABLECIDA', 'CUENTA_EDITADA', 'CUENTA_SUSPENDIDA', 'MATERIA_CREADA', 'EXPORTACION', 'TUTOR_APROBADO'].every(a => acciones.includes(a)), JSON.stringify(acciones));
+// Recuperar la contraseña con un código (sin pasar por un administrador)
+r = await api('POST', '/auth/recuperar', null, { email: 'noexiste@demo.co' });
+check('recuperar con correo desconocido no revela nada', r.s === 200 && !r.d.codigoDemo, JSON.stringify(r));
+r = await api('POST', '/auth/recuperar', null, { email: 'sofia@demo.co' });
+check('recuperar entrega código en modo demo', r.s === 200 && /^\d{6}$/.test(r.d.codigoDemo ?? ''), JSON.stringify(r));
+const codigo = r.d.codigoDemo;
+const sofiaAntes = await login('sofia@demo.co');
+r = await api('POST', '/auth/restablecer', null, { email: 'sofia@demo.co', codigo: codigo === '000000' ? '111111' : '000000', nueva: 'Recupero2026' });
+check('código equivocado 400', r.s === 400, JSON.stringify(r));
+r = await api('POST', '/auth/restablecer', null, { email: 'sofia@demo.co', codigo, nueva: 'Recupero2026' });
+check('restablecer con el código deja la sesión iniciada', r.s === 200 && !!r.d.token && r.d.usuario.email === 'sofia@demo.co', JSON.stringify(r));
+check('el token anterior deja de servir', (await api('GET', '/yo', sofiaAntes.token)).s === 401);
+r = await api('POST', '/auth/restablecer', null, { email: 'sofia@demo.co', codigo, nueva: 'Otra2026x' });
+check('el código no se puede usar dos veces', r.s === 400, JSON.stringify(r));
+check('entra con la contraseña nueva', (await api('POST', '/auth/login', null, { email: 'sofia@demo.co', password: 'Recupero2026' })).s === 200);
+
+// Solicitudes de materias: el tutor pide, el administrador aprueba o rechaza
+const paola = await login('paola@demo.co');
+r = await api('GET', '/admin/solicitudes-materia', admin.token);
+check('la solicitud sembrada aparece al admin', r.d.some(s => s.nombre === 'Microeconomía' && s.estado === 'PENDIENTE'), JSON.stringify(r.d).slice(0, 200));
+r = await api('GET', '/admin/resumen', admin.token); check('el resumen cuenta las solicitudes pendientes', r.d.solicitudesMateria >= 1, r.d.solicitudesMateria);
+r = await api('POST', '/tutor/solicitudes-materia', paola.token, { nombre: 'Estadística', area: 'Matemáticas', motivo: 'La enseño hace años en la universidad.' });
+check('no se pide una materia que ya está en el catálogo (409)', r.s === 409, JSON.stringify(r));
+r = await api('POST', '/tutor/solicitudes-materia', paola.token, { nombre: 'Finanzas personales', area: 'Negocios', motivo: 'Me la piden estudiantes de primeros semestres.' });
+check('el tutor pide una materia nueva', r.s === 201 && r.d.estado === 'PENDIENTE', JSON.stringify(r));
+const idFinanzas = r.d.id;
+r = await api('POST', '/tutor/solicitudes-materia', paola.token, { nombre: 'finanzas personales', area: 'Negocios', motivo: 'Repito la misma solicitud otra vez.' });
+check('solicitud repetida 409', r.s === 409, JSON.stringify(r));
+check('un estudiante no pide materias (403)', (await api('POST', '/tutor/solicitudes-materia', ana.token, { nombre: 'Otra', area: 'Otra', motivo: 'No debería poder.' })).s >= 401);
+r = await api('GET', '/admin/solicitudes-materia', admin.token);
+const micro = r.d.find(s => s.nombre === 'Microeconomía');
+r = await api('POST', `/admin/solicitudes-materia/${micro.id}/aprobar`, admin.token, {});
+check('el admin aprueba la solicitud', r.s === 200 && r.d.estado === 'APROBADA' && r.d.asignada === true, JSON.stringify(r));
+r = await api('GET', '/materias', paola.token); check('la materia aprobada entra al catálogo', r.d.some(m => m.nombre === 'Microeconomía'));
+r = await api('GET', '/yo', paola.token); check('y queda en el perfil del tutor', r.d.tutor.materias.some(m => m.nombre === 'Microeconomía'), JSON.stringify(r.d.tutor.materias));
+r = await api('POST', `/admin/solicitudes-materia/${micro.id}/aprobar`, admin.token, {});
+check('una solicitud respondida no se responde otra vez (409)', r.s === 409, JSON.stringify(r));
+r = await api('POST', `/admin/solicitudes-materia/${idFinanzas}/rechazar`, admin.token, { motivo: 'Por ahora el catálogo es solo académico.' });
+check('el admin rechaza con motivo', r.s === 200 && r.d.estado === 'RECHAZADA', JSON.stringify(r));
+r = await api('GET', '/tutor/solicitudes-materia', paola.token);
+check('el tutor ve el estado y la respuesta', r.d.find(s => s.id === idFinanzas)?.respuesta?.includes('académico'), JSON.stringify(r.d));
+r = await api('GET', '/admin/auditoria', admin.token);
+check('la bitácora registra las solicitudes', ['SOLICITUD_APROBADA', 'SOLICITUD_RECHAZADA'].every(a => r.d.some(x => x.accion === a)));
 console.log(`\n${ok} correctas, ${mal} fallas`);
 process.exit(mal ? 1 : 0);

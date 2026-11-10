@@ -20,6 +20,8 @@ const ACCION: Record<string, { texto: string; color: string }> = {
   MATERIA_CREADA: { texto: 'Materia', color: 'blue' },
   MATERIA_EDITADA: { texto: 'Materia', color: 'default' },
   EXPORTACION: { texto: 'Exportación', color: 'default' },
+  SOLICITUD_APROBADA: { texto: 'Solicitud aprobada', color: 'green' },
+  SOLICITUD_RECHAZADA: { texto: 'Solicitud rechazada', color: 'red' },
 };
 
 const columnas: ColumnsType<EntradaAuditoria> = [

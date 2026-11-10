@@ -3,6 +3,7 @@ import cors from 'cors';
 import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { tx, uno, todos, ejecutar, sembrar } from './db.js';
 import {
@@ -84,6 +85,55 @@ api.post('/auth/login', (req, res) => {
     throw new ErrorHttp(401, 'Correo o contraseña incorrectos.');
   if (u.estado !== 'ACTIVO') throw new ErrorHttp(403, 'Tu cuenta está suspendida. Escribe a soporte.');
   res.json({ token: firmar(u), usuario: perfilPropio(u) });
+});
+
+/* ---------- Recuperar la contraseña sin depender de un administrador ---------- */
+
+const MINUTOS_CODIGO = 15;
+const INTENTOS_CODIGO = 5;
+
+/**
+ * Pide un código de 6 dígitos. En producción llegaría por correo; en modo demostración se devuelve en la respuesta
+ * (igual que los pagos simulados). La respuesta no dice si el correo existe, salvo el código de demostración.
+ */
+api.post('/auth/recuperar', (req, res) => {
+  const email = String(req.body.email ?? '').trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new ErrorHttp(400, 'El correo no es válido.');
+  const u = uno<{ id: number; estado: string }>('SELECT id, estado FROM usuarios WHERE email = ?', email);
+  const mensaje = `Si el correo está registrado, te enviamos un código de 6 dígitos. Vence en ${MINUTOS_CODIGO} minutos.`;
+  if (!u || u.estado !== 'ACTIVO') { res.json({ mensaje }); return; }
+  const codigo = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+  tx(() => {
+    ejecutar('UPDATE recuperaciones SET usado = 1 WHERE usuario_id = ? AND usado = 0', u.id);
+    ejecutar('INSERT INTO recuperaciones (usuario_id, codigo_hash, expira_en, creado_en) VALUES (?,?,?,?)',
+      u.id, bcrypt.hashSync(codigo, 8), new Date(Date.now() + MINUTOS_CODIGO * MIN).toISOString(), ahoraIso());
+  });
+  res.json({ mensaje, ...(MODO_DEMO ? { codigoDemo: codigo } : {}) });
+});
+
+/** Cambia la contraseña con el código y deja la sesión iniciada. Cierra las demás sesiones abiertas de la cuenta. */
+api.post('/auth/restablecer', (req, res) => {
+  const email = String(req.body.email ?? '').trim().toLowerCase();
+  const codigo = String(req.body.codigo ?? '').replace(/\D/g, '');
+  const nueva = validarClave(req.body.nueva);
+  const invalido = new ErrorHttp(400, 'El código no es válido o ya venció. Pide uno nuevo.');
+  const u = uno<{ id: number; estado: string }>('SELECT id, estado FROM usuarios WHERE email = ?', email);
+  if (!u || u.estado !== 'ACTIVO') throw invalido;
+  const r = uno<{ id: number; codigo_hash: string; intentos: number; expira_en: string }>(
+    'SELECT id, codigo_hash, intentos, expira_en FROM recuperaciones WHERE usuario_id = ? AND usado = 0 ORDER BY id DESC LIMIT 1', u.id);
+  if (!r || Date.parse(r.expira_en) < Date.now() || r.intentos >= INTENTOS_CODIGO) throw invalido;
+  if (!bcrypt.compareSync(codigo, r.codigo_hash)) {
+    ejecutar('UPDATE recuperaciones SET intentos = intentos + 1 WHERE id = ?', r.id);
+    throw new ErrorHttp(400, r.intentos + 1 >= INTENTOS_CODIGO ? 'Demasiados intentos. Pide un código nuevo.' : 'El código no es correcto.');
+  }
+  tx(() => {
+    ejecutar('UPDATE recuperaciones SET usado = 1 WHERE id = ?', r.id);
+    ejecutar('UPDATE usuarios SET password_hash = ?, debe_cambiar = 0, version_token = version_token + 1 WHERE id = ?',
+      bcrypt.hashSync(nueva, 10), u.id);
+    notificar(u.id, 'Contraseña cambiada', 'Recuperaste el acceso con un código. Si no fuiste tú, escribe a soporte.');
+  });
+  const usuario = uno<Usuario>(`SELECT ${COLUMNAS_USUARIO} FROM usuarios WHERE id = ?`, u.id)!;
+  res.json({ token: firmar(usuario), usuario: perfilPropio(usuario) });
 });
 
 montarDescargas(api);
@@ -186,6 +236,39 @@ api.post('/tutor/en-linea', soloRol('TUTOR'), (req, res) => {
   if (enLinea && t.verificacion !== 'APROBADO') throw new ErrorHttp(403, 'Tu perfil debe estar aprobado para recibir solicitudes.');
   ejecutar('UPDATE tutores SET en_linea = ? WHERE usuario_id = ?', enLinea ? 1 : 0, req.yo.id);
   res.json({ enLinea });
+});
+
+/* ---------- Solicitudes de materias nuevas (el tutor pide, un administrador decide) ---------- */
+
+const vistaSolicitud = (s: any) => ({
+  id: s.id, nombre: s.nombre, area: s.area, motivo: s.motivo, estado: s.estado, respuesta: s.respuesta,
+  creadoEn: s.creado_en, resueltaEn: s.resuelta_en, materiaId: s.materia_id,
+  ...(s.tutor_nombre ? { tutor: { id: s.tutor_id, nombre: s.tutor_nombre, email: s.tutor_email } } : {}),
+  ...(s.resuelta_nombre ? { resueltaPor: s.resuelta_nombre } : {}),
+});
+
+api.get('/tutor/solicitudes-materia', soloRol('TUTOR'), (req, res) => {
+  res.json(todos('SELECT * FROM solicitudes_materia WHERE tutor_id = ? ORDER BY id DESC', req.yo.id).map(vistaSolicitud));
+});
+
+api.post('/tutor/solicitudes-materia', soloRol('TUTOR'), (req, res) => {
+  const nombre = texto(req.body.nombre, 'El nombre de la materia', 3, 60);
+  const area = texto(req.body.area, 'El área', 3, 40);
+  const motivo = texto(req.body.motivo, 'El motivo', 10, 300);
+  if (uno('SELECT 1 AS x FROM materias WHERE lower(nombre) = lower(?) AND activa = 1', nombre))
+    throw new ErrorHttp(409, 'Esa materia ya está en el catálogo: búscala en la lista de tu perfil.');
+  if (uno(`SELECT 1 AS x FROM solicitudes_materia WHERE tutor_id = ? AND lower(nombre) = lower(?) AND estado = 'PENDIENTE'`, req.yo.id, nombre))
+    throw new ErrorHttp(409, 'Ya tienes una solicitud pendiente para esa materia.');
+  if ((uno<{ n: number }>(`SELECT COUNT(*) AS n FROM solicitudes_materia WHERE tutor_id = ? AND estado = 'PENDIENTE'`, req.yo.id)?.n ?? 0) >= 3)
+    throw new ErrorHttp(409, 'Tienes 3 solicitudes pendientes. Espera a que un administrador las revise.');
+  const id = tx(() => {
+    const nueva = Number(ejecutar('INSERT INTO solicitudes_materia (tutor_id, nombre, area, motivo, creado_en) VALUES (?,?,?,?,?)',
+      req.yo.id, nombre, area, motivo, ahoraIso()).lastInsertRowid);
+    for (const a of idsDeRol('ADMIN'))
+      notificar(a, 'Solicitud de materia', `${req.yo.nombre} pide agregar ${nombre} (${area}).`, null, '/admin/materias');
+    return nueva;
+  });
+  res.status(201).json(vistaSolicitud(uno('SELECT * FROM solicitudes_materia WHERE id = ?', id)));
 });
 
 api.get('/tutor/ingresos', soloRol('TUTOR'), (req, res) => {
@@ -530,6 +613,7 @@ admin.get('/resumen', (_req, res) => {
     disputasAbiertas: n(`SELECT COUNT(*) AS n FROM disputas WHERE estado <> 'RESUELTA'`),
     disputasEscaladas: n(`SELECT COUNT(*) AS n FROM disputas WHERE estado = 'ESCALADA'`),
     disputasSinAsignar: n(`SELECT COUNT(*) AS n FROM disputas WHERE estado = 'ABIERTA'`),
+    solicitudesMateria: n(`SELECT COUNT(*) AS n FROM solicitudes_materia WHERE estado = 'PENDIENTE'`),
     sesionesTotales: n('SELECT COUNT(*) AS n FROM sesiones'),
     sesionesFinalizadas: n(`SELECT COUNT(*) AS n FROM sesiones WHERE estado = 'FINALIZADA'`),
     volumenPagado: n(`SELECT COALESCE(SUM(monto - reembolso), 0) AS n FROM pagos`),
@@ -730,6 +814,63 @@ admin.patch('/materias/:id', (req, res) => {
     auditar(req.yo.id, 'MATERIA_EDITADA', `Materia ${nombre}: ${cambios.join(', ')}.`);
   });
   res.json(vistaMateria(uno(`${SQL_MATERIA_ADMIN} WHERE m.id = ?`, m.id)));
+});
+
+/* ---------- Solicitudes de materias de los tutores ---------- */
+
+const SQL_SOLICITUD_ADMIN = `
+  SELECT s.*, t.nombre AS tutor_nombre, t.email AS tutor_email, r.nombre AS resuelta_nombre
+  FROM solicitudes_materia s JOIN usuarios t ON t.id = s.tutor_id LEFT JOIN usuarios r ON r.id = s.resuelta_por`;
+
+function solicitudPendiente(idTexto: unknown) {
+  const s = uno<any>(`${SQL_SOLICITUD_ADMIN} WHERE s.id = ?`, entero(idTexto, 'La solicitud'));
+  if (!s) throw new ErrorHttp(404, 'La solicitud no existe.');
+  if (s.estado !== 'PENDIENTE') throw new ErrorHttp(409, 'La solicitud ya fue respondida.');
+  return s;
+}
+
+admin.get('/solicitudes-materia', (_req, res) => {
+  res.json(todos(`${SQL_SOLICITUD_ADMIN} ORDER BY s.estado = 'PENDIENTE' DESC, s.id DESC LIMIT 200`).map(vistaSolicitud));
+});
+
+/** Aprueba: crea la materia (o reactiva una con el mismo nombre) y se la asigna al tutor si tiene cupo (máximo 6). */
+admin.post('/solicitudes-materia/:id/aprobar', (req, res) => {
+  const s = solicitudPendiente(req.params.id);
+  const nombre = req.body.nombre === undefined ? s.nombre : texto(req.body.nombre, 'El nombre', 3, 60);
+  const area = req.body.area === undefined ? s.area : texto(req.body.area, 'El área', 3, 40);
+  let asignada = false;
+  tx(() => {
+    const existente = uno<{ id: number }>('SELECT id FROM materias WHERE lower(nombre) = lower(?)', nombre);
+    const materiaId = existente
+      ? (ejecutar('UPDATE materias SET activa = 1 WHERE id = ?', existente.id), existente.id)
+      : Number(ejecutar('INSERT INTO materias (nombre, area) VALUES (?,?)', nombre, area).lastInsertRowid);
+    const tiene = uno<{ n: number }>('SELECT COUNT(*) AS n FROM tutor_materias WHERE tutor_id = ?', s.tutor_id)!.n;
+    if (tiene < 6) {
+      ejecutar('INSERT OR IGNORE INTO tutor_materias VALUES (?,?)', s.tutor_id, materiaId);
+      asignada = true;
+    }
+    ejecutar(`UPDATE solicitudes_materia SET estado = 'APROBADA', materia_id = ?, resuelta_por = ?, resuelta_en = ?, respuesta = ? WHERE id = ?`,
+      materiaId, req.yo.id, ahoraIso(), asignada ? null : 'La materia quedó en el catálogo; ya tienes 6 materias, cambia alguna en tu perfil para agregarla.', s.id);
+    auditar(req.yo.id, 'SOLICITUD_APROBADA',
+      `Aprobó la solicitud de ${s.tutor_nombre}: ${existente ? 'reactivó' : 'creó'} la materia ${nombre} (${area})${asignada ? ' y se la asignó' : ''}.`, s.tutor_id);
+    notificar(s.tutor_id, 'Materia aprobada', asignada
+      ? `${nombre} ya está en el catálogo y en tu perfil.`
+      : `${nombre} ya está en el catálogo. Tienes 6 materias: cambia alguna en tu perfil para agregarla.`, null, '/perfil');
+  });
+  emitir(s.tutor_id, { tipo: 'perfil' });
+  res.json({ ...vistaSolicitud(uno(`${SQL_SOLICITUD_ADMIN} WHERE s.id = ?`, s.id)), asignada });
+});
+
+admin.post('/solicitudes-materia/:id/rechazar', (req, res) => {
+  const s = solicitudPendiente(req.params.id);
+  const motivo = texto(req.body.motivo, 'El motivo del rechazo', 5, 300);
+  tx(() => {
+    ejecutar(`UPDATE solicitudes_materia SET estado = 'RECHAZADA', respuesta = ?, resuelta_por = ?, resuelta_en = ? WHERE id = ?`,
+      motivo, req.yo.id, ahoraIso(), s.id);
+    auditar(req.yo.id, 'SOLICITUD_RECHAZADA', `Rechazó la solicitud de ${s.tutor_nombre} para ${s.nombre}: ${motivo}`, s.tutor_id);
+    notificar(s.tutor_id, 'Solicitud de materia rechazada', `${s.nombre}: ${motivo}`, null, '/perfil');
+  });
+  res.json(vistaSolicitud(uno(`${SQL_SOLICITUD_ADMIN} WHERE s.id = ?`, s.id)));
 });
 
 /* ---------- Exportar a CSV (Excel en español usa ; como separador) ---------- */

@@ -52,6 +52,17 @@ try {
   const carlos = await abrir('carlos@demo.co');
   const admin = await abrir('rick@tutores.co');
 
+  // Estudiante: su inicio y el aviso de un caso de soporte abierto (Luis tiene uno en la semilla)
+  await ana.locator('.kpi').first().waitFor();
+  await foto(ana, 'web-22-inicio-estudiante');
+  const luis = await abrir('luis@demo.co');
+  await luis.locator('.alerta', { hasText: 'Caso de soporte #1' }).waitFor();
+  await luis.getByRole('link', { name: 'Ver el caso y escribir a soporte' }).click();
+  await luis.locator('.caso-parte').waitFor();
+  await luis.context().close();
+  ok('el estudiante ve en su inicio el caso abierto y entra a la conversación con soporte');
+  await ana.goto(`${URL}/buscar`);
+
   // Estudiante: búsqueda
   await ana.locator('.tutor-tarjeta').first().waitFor();
   const total = await ana.locator('.tutor-tarjeta').count();
@@ -207,6 +218,9 @@ try {
 
   // Soporte atiende el caso y lo escala; el administrador decide
   const soporte = await abrir('soporte@tutores.co');
+  await soporte.getByText('Mis casos abiertos').first().waitFor();
+  await foto(soporte, 'web-23-inicio-soporte');
+  await soporte.goto(`${URL}/casos`);
   const filaCaso = soporte.locator('table tbody tr', { hasText: 'Ana Martínez' }).first();
   await filaCaso.waitFor();
   await foto(soporte, 'web-19-soporte-casos');
@@ -274,6 +288,25 @@ try {
   await admin.locator('tr', { hasText: 'Cálculo diferencial' }).waitFor();
   await foto(admin, 'web-19-admin-materias');
   ok('la bitácora registra lo que hizo el administrador y el catálogo de materias carga');
+
+  // Recuperar la contraseña con el código (modo demostración)
+  {
+    const ctx = await navegador.newContext({ viewport: { width: 1360, height: 860 } });
+    const p = await ctx.newPage();
+    p.on('pageerror', (e) => errores.push(`[recuperar] ${e.message}`));
+    await p.goto(URL);
+    await p.getByRole('link', { name: '¿Olvidaste tu contraseña?' }).click();
+    await p.getByLabel('Correo electrónico').fill('laura@demo.co');
+    await p.getByRole('button', { name: 'Enviar código' }).click();
+    const codigo = (await p.locator('.ant-alert-warning .nums').first().innerText()).trim().slice(0, 6);
+    await p.getByLabel('Código de 6 dígitos').fill(codigo);
+    await p.getByLabel('Contraseña nueva', { exact: true }).fill('Laura2026');
+    await p.getByLabel('Repite la contraseña nueva').fill('Laura2026');
+    await p.getByRole('button', { name: 'Cambiar contraseña y entrar' }).click();
+    await p.locator('.barra').waitFor();
+    await ctx.close();
+    ok('recuperar la contraseña con el código y entrar sin pasar por un administrador');
+  }
 
   // Pantalla angosta
   await ana.setViewportSize({ width: 390, height: 844 });

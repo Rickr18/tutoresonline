@@ -5,6 +5,7 @@ import { almacen, api, ErrorApi, type Usuario } from '../api';
 import { useSesion } from '../sesion';
 import { Alerta, Boton, Campo, Segmentos, mensajeDe } from '../ui';
 import { C, e } from '../tema';
+import Recuperar from './Recuperar';
 
 const DEMOS = [
   { rol: 'Estudiante', email: 'ana@demo.co' },
@@ -20,6 +21,7 @@ export default function Acceso() {
   const [rol, setRol] = useState<'ESTUDIANTE' | 'TUTOR'>('ESTUDIANTE');
   const [servidor, setServidor] = useState(almacen.servidor());
   const [verServidor, setVerServidor] = useState(false);
+  const [recuperando, setRecuperando] = useState(false);
   useEffect(() => { setServidor(almacen.servidor()); }, []);
 
   const enviar = useMutation({
@@ -65,6 +67,12 @@ export default function Acceso() {
           {enviar.isError && <Alerta>{mensajeDe(enviar.error)}</Alerta>}
           <Boton texto={modo === 'entrar' ? 'Ingresar' : 'Crear cuenta'} cargando={enviar.isPending}
             alPresionar={() => enviar.mutate({ email: email.trim(), password })} />
+          {modo === 'entrar' && (
+            <Pressable onPress={() => setRecuperando(true)} accessibilityRole="button" style={{ alignSelf: 'center', padding: 4 }}>
+              <Text style={{ color: C.marino, fontWeight: '700' }}>¿Olvidaste tu contraseña?</Text>
+            </Pressable>
+          )}
+          {recuperando && <Recuperar emailInicial={email} servidor={servidor} cerrar={() => setRecuperando(false)} />}
           {modo === 'registro' && rol === 'TUTOR' && (
             <Text style={e.pequeno}>Después de registrarte completas tu perfil en la web y un administrador lo verifica antes de publicarlo.</Text>
           )}

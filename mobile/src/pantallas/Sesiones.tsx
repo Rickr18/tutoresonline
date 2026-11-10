@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { EstadoSesion } from '../api';
-import { FilaSesion, Pantalla, useSesiones } from '../comunes';
+import { FilaSesion, Pantalla, casoAbierto, useSesiones } from '../comunes';
 import { useSesion } from '../sesion';
 import { Alerta, Cargando, Segmentos, Vacio, mensajeDe } from '../ui';
 
@@ -11,8 +11,10 @@ export default function Sesiones() {
   const sesiones = useSesiones();
   const [vista, setVista] = useState<'activas' | 'historial'>('activas');
   const fechaDe = (s: { inicio: string | null; creadoEn: string }) => Date.parse(s.inicio ?? s.creadoEn);
-  const activas = (sesiones.data ?? []).filter((s) => ACTIVAS.includes(s.estado)).sort((a, b) => fechaDe(a) - fechaDe(b));
-  const historial = (sesiones.data ?? []).filter((s) => !ACTIVAS.includes(s.estado)).sort((a, b) => fechaDe(b) - fechaDe(a));
+  // Una sesión terminada con un caso de soporte sin resolver sigue activa: tiene algo pendiente.
+  const esActiva = (s: Parameters<typeof casoAbierto>[0]) => ACTIVAS.includes(s.estado) || casoAbierto(s);
+  const activas = (sesiones.data ?? []).filter(esActiva).sort((a, b) => fechaDe(a) - fechaDe(b));
+  const historial = (sesiones.data ?? []).filter((s) => !esActiva(s)).sort((a, b) => fechaDe(b) - fechaDe(a));
   const lista = vista === 'activas' ? activas : historial;
 
   return (

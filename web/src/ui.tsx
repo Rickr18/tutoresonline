@@ -69,7 +69,8 @@ export function Alerta({ tono = 'mal', titulo, children }: { tono?: 'mal' | 'inf
 export function Kpi({ etiqueta, valor, nota, fuerte }: { etiqueta: ReactNode; valor: ReactNode; nota?: ReactNode; fuerte?: boolean }) {
   return (
     <Card className={`kpi${fuerte ? ' fuerte' : ''}`} size="small" style={fuerte ? { background: MARINO, borderColor: MARINO } : undefined}>
-      <Statistic title={<span style={fuerte ? { color: '#c4cfe0' } : undefined}>{etiqueta}</span>} value={valor as string}
+      {/* formatter muestra el valor tal cual: puede traer íconos (la estrella de la calificación), no solo números. */}
+      <Statistic title={<span style={fuerte ? { color: '#c4cfe0' } : undefined}>{etiqueta}</span>} value={0} formatter={() => valor}
         styles={{ content: { fontWeight: 700, color: fuerte ? '#fff' : MARINO } }} />
       {nota && <Typography.Text style={{ fontSize: 12, color: fuerte ? '#a9b6cb' : '#5f6b7c' }}>{nota}</Typography.Text>}
     </Card>
