@@ -2,22 +2,34 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 export * from './tipos';
 import type { Adjunto } from './tipos';
 
 const EMULADOR_ANDROID = 'http://10.0.2.2:3000';
+/** Servidor de producción (Render), definido en app.json > expo.extra.servidor. */
+const SERVIDOR_PRODUCCION: string | undefined = Constants.expoConfig?.extra?.servidor;
+/** Versión web (la PWA de iPhone): habla con el mismo servidor que la sirve. */
+export const ES_WEB = Platform.OS === 'web';
 
 /**
- * Servidor por defecto: el de EXPO_PUBLIC_API_URL (APK compilado) o, en desarrollo con Expo Go,
- * el mismo computador que sirve el proyecto (la IP de Metro) en el puerto 3000.
+ * Servidor por defecto, en este orden:
+ * 1. EXPO_PUBLIC_API_URL si se fijó al compilar (pruebas, o la variable API_URL del workflow del APK).
+ * 2. En web, el origen de la página.
+ * 3. En desarrollo con Expo Go, el computador que sirve el proyecto (la IP de Metro) en el puerto 3000.
+ * 4. En el APK de producción, el servidor de Render de app.json.
  */
 function servidorPorDefecto() {
   const fijo = process.env.EXPO_PUBLIC_API_URL;
   if (fijo) return fijo.replace(/\/+$/, '');
-  const host = Constants.expoConfig?.hostUri?.split(':')[0];
-  if (host && /^[\d.]+$|^localhost$/.test(host)) return `http://${host}:3000`;
-  return EMULADOR_ANDROID;
+  if (ES_WEB && typeof location !== 'undefined') return location.origin;
+  if (__DEV__ || !SERVIDOR_PRODUCCION) {
+    const host = Constants.expoConfig?.hostUri?.split(':')[0];
+    if (host && /^[\d.]+$|^localhost$/.test(host)) return `http://${host}:3000`;
+    return EMULADOR_ANDROID;
+  }
+  return SERVIDOR_PRODUCCION.replace(/\/+$/, '');
 }
 
 export const SERVIDOR_POR_DEFECTO = servidorPorDefecto();
@@ -38,8 +50,9 @@ export const almacen = {
   async cargar() {
     const [t, s] = await Promise.all([AsyncStorage.getItem(CLAVE_TOKEN), AsyncStorage.getItem(CLAVE_SERVIDOR)]);
     token = t;
-    // Una dirección guardada antes con el valor del emulador no sirve en un teléfono real.
-    if (s && s !== EMULADOR_ANDROID) servidor = s;
+    // Una dirección guardada con el valor del emulador no sirve en un teléfono real,
+    // y en web siempre se usa el servidor que sirve la página.
+    if (s && s !== EMULADOR_ANDROID && !ES_WEB) servidor = s;
     return { token: t, servidor };
   },
   token: () => token,

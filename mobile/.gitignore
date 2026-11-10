@@ -43,3 +43,6 @@ yarn-error.*
 # Carpetas nativas generadas con expo prebuild (CNG)
 /android
 /ios
+
+# PWA exportada (npm run export:pwa -- dist-pwa)
+dist-pwa/

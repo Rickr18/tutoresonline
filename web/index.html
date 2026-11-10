@@ -13,6 +13,20 @@
     <meta name="apple-mobile-web-app-title" content="TutoresOn" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>TutoresOn-Line</title>
+    <script>
+      // iPhone: la app de estudiante y tutor está en /app/ (la misma app móvil, exportada a web).
+      // ?web=1 deja la versión web completa (soporte y administración) y lo recuerda; /descargar no se redirige.
+      (function () {
+        try {
+          var clave = 'tutoresonline.version-web';
+          if (/[?&]web=1(&|$)/.test(location.search)) localStorage.setItem(clave, '1');
+          var iphone = /iPhone|iPod/.test(navigator.userAgent);
+          var ruta = location.pathname;
+          // Si la PWA no está compilada, /app/ cae en esta misma página: no se vuelve a redirigir.
+          if (iphone && localStorage.getItem(clave) !== '1' && ruta.indexOf('/descargar') !== 0 && ruta.indexOf('/app') !== 0) location.replace('/app/');
+        } catch (e) { /* sin almacenamiento: se queda en la web */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="raiz"></div>

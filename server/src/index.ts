@@ -953,6 +953,14 @@ api.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 const web = path.resolve(process.env.WEB_DIST ?? path.join(import.meta.dirname, '..', '..', 'web', 'dist'));
 if (fs.existsSync(path.join(web, 'index.html'))) {
   app.use(express.static(web, { maxAge: '1h', index: false }));
+  // PWA de iPhone: la app móvil exportada a web en web/dist/app (la arma el Dockerfile o "npm run export:pwa" en mobile).
+  const pwa = path.join(web, 'app', 'index.html');
+  app.get(/^\/app(\/.*)?$/, (req, res, next) => {
+    if (!fs.existsSync(pwa)) return next();
+    if (req.path === '/app') return res.redirect(301, '/app/');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(pwa);
+  });
   app.get('*', (_req, res) => res.sendFile(path.join(web, 'index.html')));
 } else {
   app.get('/', (_req, res) => res.type('text').send('API de TutoresOn-Line. Compila la web con "npm run build" en la carpeta web.'));

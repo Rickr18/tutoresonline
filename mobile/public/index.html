@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <!-- PWA de iPhone: la misma app de Expo exportada a web y servida en /app/.
+         viewport-fit=cover deja que la app use toda la pantalla (notch y Dynamic Island) con los márgenes seguros. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#12233f" />
+    <meta name="description" content="Tutorías académicas con tutores verificados." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="TutoresOn" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icono-192.png" />
+    <title>TutoresOn-Line</title>
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background-color: #12233f;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+      body {
+        /* El desplazamiento lo hacen los ScrollView; sin rebote de toda la página en Safari. */
+        overflow: hidden;
+        overscroll-behavior: none;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+      /* Con el teclado abierto Safari reduce el área visible: dvh sigue esa altura. */
+      @supports (height: 100dvh) {
+        html, body, #root { height: 100dvh; }
+      }
+      input, textarea { font-size: 16px; }
+    </style>
+  </head>
+
+  <body>
+    <noscript>Activa JavaScript para usar TutoresOn-Line.</noscript>
+    <div id="root"></div>
+    <script>
+      // El service worker solo se registra en la PWA servida en /app/ (no en pruebas locales servidas en la raíz).
+      if ('serviceWorker' in navigator && location.pathname.indexOf('/app/') === 0) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' }).catch(function () {});
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -1,6 +1,6 @@
 {
   "name": "tutoresonline-mobile",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -27,7 +27,8 @@
     "android": "expo start --android",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "export:web": "expo export --platform web"
+    "export:web": "expo export --platform web",
+    "export:pwa": "node scripts/exportar-pwa.mjs"
   },
   "private": true
 }

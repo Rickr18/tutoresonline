@@ -89,6 +89,7 @@ node pruebas/e2e-web.mjs               # recorrido web con Playwright (requiere 
 cd mobile && EXPO_PUBLIC_API_URL=http://localhost:3000 npx expo export --platform web --output-dir /tmp/movil
 python3 -m http.server 8090 -d /tmp/movil &
 node pruebas/e2e-movil.mjs             # recorrido de la app en tamaño de teléfono
+node pruebas/e2e-pwa.mjs               # PWA de iPhone en /app/ (WebKit; requiere la web y la PWA compiladas, ver abajo)
 ```
 
 ## Desplegar la web en Render
@@ -106,10 +107,24 @@ docker build -t tutoresonline .
 docker run -d -p 80:3000 -e JWT_SECRET=una-clave-larga tutoresonline
 ```
 
+## App en iPhone (PWA)
+
+En iPhone no hay app nativa: el servidor sirve en `/app/` la misma app de `mobile/` exportada a web, con su navegación por pestañas. Al abrir la web desde un iPhone se pasa a `/app/`, y desde ahí Safari la agrega a la pantalla de inicio (Compartir > Agregar a inicio). Soporte y administración usan la versión web completa (`/?web=1`).
+
+El `Dockerfile` la arma solo. Para probarla en local:
+
+```bash
+cd web && npm run build
+cd ../mobile && npm run export:pwa      # deja la PWA en web/dist/app (después de compilar la web)
+cd ../server && npm start               # http://localhost:3000/app/
+```
+
 ## Compilar el APK
 
-1. En GitHub, ir a **Settings > Secrets and variables > Actions > Variables** y crear la variable `API_URL` con la URL de Render (sin barra al final).
-2. Ir a **Actions > APK Android > Run workflow**. La compilación tarda entre 10 y 20 minutos.
+El APK usa por defecto el servidor de Render definido en `mobile/app.json` (`expo.extra.servidor`). La variable del repositorio `API_URL` es opcional y lo reemplaza. En desarrollo con Expo Go se sigue usando la IP del computador.
+
+1. Subir `version` y `android.versionCode` en `mobile/app.json`.
+2. Ir a **Actions > APK Android > Run workflow**, o subir una etiqueta `v*` (por ejemplo `v1.1.0`). La compilación tarda entre 10 y 20 minutos.
 3. El APK queda publicado en **Releases** como `TutoresOn-Line.apk` y también como artefacto del flujo.
 
 Para instalarlo, descargar el archivo en el teléfono Android y permitir la instalación de aplicaciones de origen desconocido.

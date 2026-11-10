@@ -1,8 +1,12 @@
 **/node_modules
 **/dist
+**/dist-pwa
 server/data
-mobile
+mobile/android
+mobile/ios
+mobile/.expo
 docs
 pruebas
+tmp-movil
 .github
 *.md

@@ -1,6 +1,6 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Alert, Button, Card, Col, Flex, Row, Steps, Typography } from 'antd';
-import { Qr, URL_APK, urlDescarga } from '../qr';
+import { abrirAppMovil, Qr, URL_APK, urlDescarga } from '../qr';
 import { AMBAR, MARINO } from '../tema';
 
 function dispositivo() {
@@ -16,7 +16,6 @@ function dispositivo() {
 const destacada = { borderColor: AMBAR, boxShadow: `0 0 0 1px ${AMBAR}` };
 
 export default function Descargar() {
-  const ir = useNavigate();
   const { android, ios, otroNavegadorIos } = dispositivo();
   const telefono = android || ios;
   const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
@@ -37,15 +36,16 @@ export default function Descargar() {
     <Col xs={24} md={12} key="ios">
       <Card title="iPhone" style={{ height: '100%', ...(ios ? destacada : {}) }}>
         <Typography.Paragraph>
-          En iPhone se usa la versión web, que queda como un ícono en la pantalla de inicio y abre a pantalla completa.
+          En iPhone se usa la misma app móvil en versión web: abre la app en Safari y agrégala a la pantalla de inicio.
+          Queda con su ícono y abre a pantalla completa, con la navegación de la app.
         </Typography.Paragraph>
         {otroNavegadorIos && <Alert type="warning" showIcon title="Abre esta página en Safari para poder agregarla a la pantalla de inicio." style={{ marginBottom: 16 }} />}
         <Steps orientation="vertical" size="small" current={-1} style={{ marginBottom: 16 }} items={[
-          { title: 'Abre la página en Safari' },
+          { title: 'Toca "Abrir la app" en Safari', content: 'Se abre en la dirección /app/.' },
           { title: 'Toca Compartir', content: 'El cuadro con la flecha hacia arriba.' },
           { title: 'Agregar a pantalla de inicio', content: 'Y luego "Agregar".' },
         ]} />
-        <Button block size="large" onClick={() => ir('/')} style={{ background: MARINO, color: '#fff', borderColor: MARINO }}>Abrir TutoresOn-Line</Button>
+        <Button block size="large" onClick={abrirAppMovil} style={{ background: MARINO, color: '#fff', borderColor: MARINO }}>Abrir la app</Button>
       </Card>
     </Col>
   );
@@ -67,7 +67,7 @@ export default function Descargar() {
             <Flex vertical gap={8} style={{ flex: 1, minWidth: 240 }}>
               <Typography.Title level={4} style={{ margin: 0 }}>Escanea con la cámara del teléfono</Typography.Title>
               <Typography.Text type="secondary">
-                El mismo código sirve para los dos: en Android descarga la app y en iPhone explica cómo dejar la web en la pantalla de inicio.
+                El mismo código sirve para los dos: en Android descarga la app y en iPhone abre la app para dejarla en la pantalla de inicio.
               </Typography.Text>
               <Typography.Text copyable className="nums">{urlDescarga()}</Typography.Text>
               {local && <Alert type="warning" showIcon title="Estás en localhost y el teléfono no puede abrir esa dirección. Entra con la IP del PC o con la URL de Render para que el código funcione." />}

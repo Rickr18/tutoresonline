@@ -1,9 +1,11 @@
+import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { api, ErrorApi, type Notificaciones, type Rol } from './src/api';
+import { api, ErrorApi, ES_WEB, type Notificaciones, type Rol } from './src/api';
+import { irAVersionWeb } from './src/instalar';
 import { ProveedorSesion, useSesion } from './src/sesion';
 import { ProveedorNav, useNav, type Pestana } from './src/nav';
 import { Cargando } from './src/ui';
@@ -99,6 +101,9 @@ function Contenido() {
 function Raiz() {
   const { usuario, cargando } = useSesion();
   const margen = useSafeAreaInsets();
+  const equipo = usuario?.rol === 'ADMIN' || usuario?.rol === 'SOPORTE';
+  // En la PWA, el equipo (que comparte la sesión con la web) trabaja desde la versión web completa.
+  useEffect(() => { if (ES_WEB && equipo) irAVersionWeb(); }, [equipo]);
   if (cargando) return <View style={{ flex: 1, justifyContent: 'center', backgroundColor: C.fondo }}><Cargando texto="Abriendo TutoresOn-Line…" /></View>;
   if (!usuario || usuario.rol === 'ADMIN' || usuario.rol === 'SOPORTE') {
     return <View style={{ flex: 1, paddingTop: margen.top, backgroundColor: C.marino }}><StatusBar style="light" /><Acceso /></View>;

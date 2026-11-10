@@ -6,6 +6,7 @@ import { Cabecera } from '../comunes';
 import { mensajeDe } from '../ui';
 import { iniciales, ROL_TEXTO } from '../formato';
 import { MARINO } from '../tema';
+import { abrirAppMovil, esIphone } from '../qr';
 
 type Claves = { actual: string; nueva: string; repetir: string };
 
@@ -93,6 +94,14 @@ export default function Cuenta() {
             <FormularioClave />
           </Card>
         </Col>
+        {esIphone() && (usuario.rol === 'ESTUDIANTE' || usuario.rol === 'TUTOR') && (
+          <Col xs={24}>
+            <Card title="App móvil">
+              <Typography.Paragraph type="secondary">En el iPhone puedes usar la app móvil, con su navegación por pestañas, e instalarla en la pantalla de inicio.</Typography.Paragraph>
+              <Button type="primary" onClick={abrirAppMovil}>Usar la app móvil</Button>
+            </Card>
+          </Col>
+        )}
       </Row>
     </>
   );

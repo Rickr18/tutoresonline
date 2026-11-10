@@ -6,6 +6,15 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
+# PWA de iPhone: la app móvil (Expo) exportada a web, que el servidor sirve en /app/.
+FROM node:22-slim AS movil
+ENV CI=1 EXPO_NO_TELEMETRY=1
+WORKDIR /app/mobile
+COPY mobile/package*.json ./
+RUN npm ci
+COPY mobile/ ./
+RUN npm run export:pwa -- dist-pwa
+
 FROM node:22-slim
 ENV NODE_ENV=production PORT=3000
 WORKDIR /app/server
@@ -14,5 +23,6 @@ RUN npm ci --omit=dev
 COPY server/ ./
 RUN rm -rf data
 COPY --from=web /app/web/dist /app/web/dist
+COPY --from=movil /app/mobile/dist-pwa /app/web/dist/app
 EXPOSE 3000
 CMD ["npm", "start"]

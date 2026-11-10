@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
-import { almacen, api, ErrorApi, type Usuario } from '../api';
+import { almacen, api, ErrorApi, ES_WEB, SERVIDOR_POR_DEFECTO, type Usuario } from '../api';
 import { useSesion } from '../sesion';
 import { Alerta, Boton, Campo, Segmentos, mensajeDe } from '../ui';
 import { C, e } from '../tema';
 import Recuperar from './Recuperar';
+import { AvisoInstalar, EnlaceVersionWeb } from '../instalar';
 
 const DEMOS = [
   { rol: 'Estudiante', email: 'ana@demo.co' },
@@ -21,6 +22,9 @@ export default function Acceso() {
   const [rol, setRol] = useState<'ESTUDIANTE' | 'TUTOR'>('ESTUDIANTE');
   const [servidor, setServidor] = useState(almacen.servidor());
   const [verServidor, setVerServidor] = useState(false);
+  // En el APK la dirección del servidor no se muestra: aparece si falla la conexión o tocando el logo 5 veces.
+  const [ajustesServidor, setAjustesServidor] = useState(__DEV__);
+  const [toquesLogo, setToquesLogo] = useState(0);
   const [recuperando, setRecuperando] = useState(false);
   useEffect(() => { setServidor(almacen.servidor()); }, []);
 
@@ -35,19 +39,20 @@ export default function Acceso() {
       return r;
     },
     onSuccess: (r) => entrar(r.token, r.usuario),
-    onError: (err) => { if (err instanceof ErrorApi && err.estado === 0) setVerServidor(true); },
+    onError: (err) => { if (err instanceof ErrorApi && err.estado === 0) { setAjustesServidor(true); setVerServidor(true); } },
   });
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.marino }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <View style={{ padding: 24, paddingTop: 36, gap: 12 }}>
-          <View style={e.fila}>
+          <Pressable style={e.fila} accessibilityLabel="TutoresOn-Line"
+            onPress={() => { const n = toquesLogo + 1; setToquesLogo(n); if (n >= 5) setAjustesServidor(true); }}>
             <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: C.ambar, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontWeight: '900', fontSize: 20, color: C.marino }}>T</Text>
             </View>
             <Text style={{ color: '#fff', fontSize: 21, fontWeight: '800' }}>Tutores<Text style={{ color: C.ambar }}>On-Line</Text></Text>
-          </View>
+          </Pressable>
           <Text style={{ color: '#fff', fontSize: 25, fontWeight: '800', lineHeight: 31 }}>Un tutor para la materia que te está costando.</Text>
           <Text style={{ color: '#c4cfe0', fontSize: 15, lineHeight: 21 }}>Reserva con un tutor verificado o pide ayuda ahora: el primer tutor disponible que acepte se conecta contigo.</Text>
         </View>
@@ -89,12 +94,23 @@ export default function Acceso() {
             </View>
           )}
 
-          <Pressable onPress={() => setVerServidor(!verServidor)} accessibilityRole="button" style={{ alignSelf: 'center', padding: 6 }}>
-            <Text style={e.pequeno}>Servidor: {servidor} {verServidor ? '▲' : '▼'}</Text>
-          </Pressable>
-          {verServidor && (
-            <Campo etiqueta="Dirección del servidor" value={servidor} onChangeText={setServidor} autoCapitalize="none" keyboardType="url"
-              ayuda="En el computador: http://IP-del-PC:3000 (la IP sale con ipconfig). En la nube: la URL de Render." />
+          <AvisoInstalar />
+          <EnlaceVersionWeb />
+
+          {ajustesServidor && !ES_WEB && (
+            <Pressable onPress={() => setVerServidor(!verServidor)} accessibilityRole="button" style={{ alignSelf: 'center', padding: 6 }}>
+              <Text style={e.pequeno}>Servidor: {servidor} {verServidor ? '▲' : '▼'}</Text>
+            </Pressable>
+          )}
+          {ajustesServidor && !ES_WEB && verServidor && (
+            <View style={{ gap: 8 }}>
+              <Campo etiqueta="Dirección del servidor" value={servidor} onChangeText={setServidor} autoCapitalize="none" keyboardType="url"
+                ayuda="Para pruebas en el computador: http://IP-del-PC:3000 (la IP sale con ipconfig). Se guarda al ingresar." />
+              {servidor !== SERVIDOR_POR_DEFECTO && (
+                <Boton texto="Usar el servidor por defecto" variante="fantasma" chico
+                  alPresionar={async () => { await almacen.guardarServidor(''); setServidor(almacen.servidor()); }} />
+              )}
+            </View>
           )}
         </View>
       </ScrollView>

@@ -1,7 +1,8 @@
 # Compila el APK de Android de la app móvil y lo publica como release del repositorio.
 # Se ejecuta a mano (Actions > "APK Android" > Run workflow) o al subir una etiqueta v*.
-# Antes de correrlo, define la variable del repositorio API_URL (Settings > Secrets and variables > Actions > Variables)
-# con la URL pública del servidor, por ejemplo https://tutoresonline.onrender.com
+# El APK usa por defecto el servidor de Render de mobile/app.json (expo.extra.servidor).
+# Opcional: la variable del repositorio API_URL (Settings > Secrets and variables > Actions > Variables) lo reemplaza.
+# La versión (versionName) y el versionCode salen de mobile/app.json; súbelos antes de cada APK nuevo.
 
 name: APK Android
 
@@ -22,6 +23,7 @@ jobs:
         working-directory: mobile
     env:
       EXPO_PUBLIC_API_URL: ${{ vars.API_URL }}
+      EXPO_NO_TELEMETRY: 1
     steps:
       - uses: actions/checkout@v4
 
@@ -42,8 +44,20 @@ jobs:
       - name: Revisar tipos
         run: npx tsc --noEmit
 
+      - name: Versión y servidor del APK
+        id: datos
+        run: |
+          VERSION=$(node -p "require('./app.json').expo.version")
+          CODIGO=$(node -p "require('./app.json').expo.android.versionCode")
+          SERVIDOR="${EXPO_PUBLIC_API_URL:-$(node -p "require('./app.json').expo.extra.servidor")}"
+          echo "Versión $VERSION, versionCode $CODIGO, servidor $SERVIDOR"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "versionCode=$CODIGO" >> "$GITHUB_OUTPUT"
+          echo "servidor=$SERVIDOR" >> "$GITHUB_OUTPUT"
+
+      # --clean regenera android/ desde cero con el código de este commit (nada de compilaciones anteriores).
       - name: Generar el proyecto nativo
-        run: npx expo prebuild --platform android --no-install
+        run: npx expo prebuild --platform android --no-install --clean
 
       - name: Compilar APK (release)
         working-directory: mobile/android
@@ -60,10 +74,10 @@ jobs:
       - name: Publicar release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('apk-{0}', github.run_number) }}
-          name: TutoresOn-Line APK ${{ github.ref_type == 'tag' && github.ref_name || github.run_number }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('apk-{0}-{1}', steps.datos.outputs.version, github.run_number) }}
+          name: TutoresOn-Line ${{ steps.datos.outputs.version }} (versionCode ${{ steps.datos.outputs.versionCode }})
           body: |
-            APK de la app móvil de TutoresOn-Line.
-            Servidor configurado: ${{ vars.API_URL }}
+            APK de la app móvil de TutoresOn-Line ${{ steps.datos.outputs.version }} (versionCode ${{ steps.datos.outputs.versionCode }}), commit ${{ github.sha }}.
+            Servidor por defecto: ${{ steps.datos.outputs.servidor }}
             Instalación: descargar TutoresOn-Line.apk en el teléfono y permitir la instalación de apps de origen desconocido.
           files: mobile/TutoresOn-Line.apk

@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { FormularioClave } from './Clave';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { almacen, api, type Notificaciones } from '../api';
+import Constants from 'expo-constants';
+import { almacen, api, ES_WEB, SERVIDOR_POR_DEFECTO, type Notificaciones } from '../api';
+import { AvisoInstalar, EnlaceVersionWeb } from '../instalar';
 import { Pantalla } from '../comunes';
 import { useNav } from '../nav';
 import { useSesion } from '../sesion';
@@ -68,9 +70,14 @@ export default function Cuenta() {
         </View>
       )}
 
-      <Text style={e.pequeno}>Servidor: {almacen.servidor()}</Text>
+      <AvisoInstalar />
+      <Text style={e.pequeno}>
+        Versión {Constants.expoConfig?.version}
+        {!ES_WEB && (__DEV__ || almacen.servidor() !== SERVIDOR_POR_DEFECTO) ? ` · Servidor: ${almacen.servidor()}` : ''}
+      </Text>
       <Boton texto="Cambiar contraseña" variante="oscuro" alPresionar={() => setCambiando(true)} />
       <Boton texto="Cerrar sesión" variante="fantasma" alPresionar={salir} />
+      <EnlaceVersionWeb />
       {cambiando && (
         <Hoja titulo="Cambiar contraseña" cerrar={() => setCambiando(false)}>
           <FormularioClave alTerminar={() => setCambiando(false)} />

@@ -111,7 +111,7 @@ export function Campo({ etiqueta, ayuda, ...props }: TextInputProps & { etiqueta
     <View>
       <Text style={e.etiqueta}>{etiqueta}</Text>
       <TextInput placeholderTextColor="#9aa5b5" accessibilityLabel={etiqueta} {...props}
-        style={[e.entrada, props.multiline ? { minHeight: 84, textAlignVertical: 'top' } : null]} />
+        style={[e.entrada, props.multiline ? { minHeight: 84, textAlignVertical: 'top' } : null, Platform.OS === 'web' && { fontSize: 16 }]} />
       {ayuda ? <Text style={[e.pequeno, { marginTop: 4 }]}>{ayuda}</Text> : null}
     </View>
   );
