@@ -2,7 +2,7 @@ import { tx, todos, ejecutar } from './db.js';
 import {
   ahoraIso, MIN, HORA, notificar, avisarSesion, emitir, reembolsar, finalizarSesion, sesionesDonde, tutoresElegibles, registrar,
 } from './nucleo.js';
-import { pesos } from './formato.js';
+import { horaCo, pesos } from './formato.js';
 
 /** Revisa los plazos del sistema. Corre cada dos segundos para que una solicitud bajo demanda no quede colgada (RNF-02). */
 export function revisarPlazos() {
@@ -27,6 +27,17 @@ export function revisarPlazos() {
       reembolsar(s.id, 100);
       notificar(s.estudiante_id, 'Reserva vencida', `${s.tutor_nombre} no respondió a tiempo. Te devolvimos el pago completo.`, s.id);
       notificar(s.tutor_id, 'Reserva vencida', `La solicitud de ${s.estudiante_nombre} venció sin respuesta.`, s.id);
+      avisarSesion(s);
+    }
+
+    // Recordatorio una hora antes de cada sesión confirmada. El evento RECORDATORIO evita repetirlo.
+    for (const s of sesionesDonde(`s.estado = 'CONFIRMADA' AND s.inicio > ? AND s.inicio <= ?
+                                   AND NOT EXISTS (SELECT 1 FROM eventos e WHERE e.sesion_id = s.id AND e.tipo = 'RECORDATORIO')`,
+                                   ahora, new Date(t + HORA).toISOString())) {
+      const hora = horaCo(s.inicio);
+      registrar(s.id, 'RECORDATORIO', `Se recordó la sesión a las dos partes: empieza a las ${hora}.`);
+      notificar(s.estudiante_id, 'Tu sesión empieza pronto', `Tu sesión de ${s.materia_nombre} con ${s.tutor_nombre} empieza a las ${hora}.`, s.id);
+      notificar(s.tutor_id, 'Tu sesión empieza pronto', `Tu sesión de ${s.materia_nombre} con ${s.estudiante_nombre} empieza a las ${hora}.`, s.id);
       avisarSesion(s);
     }
 

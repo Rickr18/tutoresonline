@@ -33,6 +33,11 @@ r = await api('POST', '/auth/login', null, { email: correo, password: 'Clave1234
 check('la cuenta nueva guarda la versión y la fecha de aceptación', r.d.usuario?.terminosVersion === '2026-11-10' && !!r.d.usuario?.terminosAceptadosEn, JSON.stringify(r.d.usuario));
 check('las cuentas sembradas traen la aceptación', !!ana.usuario.terminosVersion && !!carlos.usuario.terminosVersion, JSON.stringify(ana.usuario));
 
+// Página de inicio pública
+r = await api('GET', '/vitrina');
+check('vitrina pública sin token', r.s === 200 && r.d.tutores === 6 && r.d.destacados.length === 4, JSON.stringify(r).slice(0, 200));
+check('la vitrina no expone correos', !JSON.stringify(r.d).includes('@'), JSON.stringify(r.d).slice(0, 200));
+
 // Búsqueda
 r = await api('GET', '/tutores', ana.token);
 check('búsqueda lista 6 aprobados', r.d.length === 6, r.d.length);

@@ -38,6 +38,21 @@ api.get('/salud', (_req, res) => res.json({ ok: true, modoDemo: MODO_DEMO, hora:
 
 api.get('/materias', (_req, res) => res.json(todos('SELECT id, nombre, area FROM materias WHERE activa = 1 ORDER BY area, nombre')));
 
+/** Datos públicos para la página de inicio: cifras generales y los tutores mejor calificados (sin correos ni datos privados). */
+api.get('/vitrina', (_req, res) => {
+  const cifras = uno<{ tutores: number; materias: number; sesiones: number; calificacion: number | null }>(`SELECT
+      (SELECT COUNT(*) FROM tutores t JOIN usuarios u ON u.id = t.usuario_id WHERE t.verificacion = 'APROBADO' AND u.estado = 'ACTIVO') AS tutores,
+      (SELECT COUNT(*) FROM materias WHERE activa = 1) AS materias,
+      (SELECT COUNT(*) FROM sesiones WHERE estado = 'FINALIZADA') AS sesiones,
+      (SELECT ROUND(AVG(c.puntaje), 1) FROM calificaciones c JOIN usuarios u ON u.id = c.destinatario_id
+        WHERE c.publicada = 1 AND u.rol = 'TUTOR') AS calificacion`)!;
+  const destacados = buscarTutores({ orden: 'calificacion' }).slice(0, 4).map((t) => ({
+    id: t.id, nombre: t.nombre, ciudad: t.ciudad, tarifaHora: t.tarifaHora, enLinea: t.enLinea, calificacion: t.calificacion,
+    totalCalificaciones: t.totalCalificaciones, materias: t.materias.map((m: { nombre: string }) => m.nombre),
+  }));
+  res.json({ ...cifras, destacados });
+});
+
 /* ---------- Cuentas (P-01) ---------- */
 
 function perfilPropio(u: Usuario) {

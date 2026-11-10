@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { almacen } from './api';
 import { C, e } from './tema';
 
-export function abrirLegal(pagina: 'terminos' | 'privacidad') {
+export function abrirLegal(pagina: 'terminos' | 'privacidad' | 'ayuda') {
   Linking.openURL(`${almacen.servidor()}/${pagina}`).catch(() => {});
 }
 
@@ -31,6 +31,8 @@ export function CasillaTerminos({ marcada, cambiar }: { marcada: boolean; cambia
 export function EnlacesLegales() {
   return (
     <Text style={[e.pequeno, { textAlign: 'center' }]}>
+      <Text style={enlace} onPress={() => abrirLegal('ayuda')} accessibilityRole="link">Ayuda</Text>
+      {'  ·  '}
       <Text style={enlace} onPress={() => abrirLegal('terminos')} accessibilityRole="link">Términos y condiciones</Text>
       {'  ·  '}
       <Text style={enlace} onPress={() => abrirLegal('privacidad')} accessibilityRole="link">Política de privacidad</Text>

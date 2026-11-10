@@ -14,6 +14,8 @@ import Acceso from './paginas/Acceso';
 import Descargar from './paginas/Descargar';
 import Recuperar from './paginas/Recuperar';
 import { Privacidad, Terminos } from './paginas/Legal';
+import Ayuda from './paginas/Ayuda';
+import InicioPublico from './paginas/InicioPublico';
 import InicioEstudiante from './paginas/estudiante/Inicio';
 import InicioSoporte from './paginas/gestion/Inicio';
 import Cuenta, { CambioObligatorio } from './paginas/Cuenta';
@@ -58,8 +60,10 @@ function Rutas() {
   // Términos y política de datos: públicas, también las abre la app móvil.
   if (pathname === '/terminos') return <Terminos />;
   if (pathname === '/privacidad') return <Privacidad />;
+  if (pathname === '/ayuda') return <Ayuda />;
   if (cargando) return <div className="pantalla-completa"><Cargando texto="Abriendo TutoresOn-Line…" /></div>;
-  if (!usuario) return <Routes><Route path="*" element={<Acceso />} /></Routes>;
+  // Sin sesión: la raíz es la página de inicio pública y /ingresar (y cualquier otra ruta) muestra el acceso.
+  if (!usuario) return <Routes><Route path="/" element={<InicioPublico />} /><Route path="*" element={<Acceso />} /></Routes>;
   if (usuario.debeCambiarPassword) return <CambioObligatorio />;
 
   const inicio = <Navigate to={INICIO[usuario.rol]} replace />;

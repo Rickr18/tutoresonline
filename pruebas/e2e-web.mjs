@@ -20,7 +20,7 @@ async function abrir(email) {
   paginas.push([email, p]);
   p.on('pageerror', (e) => errores.push(`[${email}] ${e.message}`));
   p.on('console', (m) => { if (m.type() === 'error' && !/status of 4\d\d/.test(m.text())) errores.push(`[${email}] ${m.text()}`); });
-  await p.goto(URL);
+  await p.goto(`${URL}/ingresar`);
   await p.getByLabel('Correo electrónico').fill(email);
   await p.getByLabel('Contraseña').fill('Demo1234');
   await p.getByRole('button', { name: 'Ingresar', exact: true }).last().click();
@@ -37,11 +37,43 @@ async function elegir(p, etiqueta, opcion) {
 }
 
 try {
+  // Página de inicio pública y preguntas frecuentes (sin sesión)
+  {
+    const ctx = await navegador.newContext({ viewport: { width: 1360, height: 860 }, deviceScaleFactor: 2 });
+    const p = await ctx.newPage();
+    p.on('pageerror', (e) => errores.push(`[inicio] ${e.message}`));
+    await p.goto(URL);
+    await p.getByRole('heading', { name: 'Un tutor para la materia que te está costando.' }).waitFor();
+    await p.locator('.inicio-cifras .ant-statistic').first().waitFor();
+    await p.locator('.inicio-tutor').first().waitFor();
+    const destacados = await p.locator('.inicio-tutor').count();
+    if (destacados < 1 || destacados > 4) throw new Error(`El inicio muestra ${destacados} tutores destacados`);
+    await foto(p, 'web-00-inicio-publico', true);
+    await p.getByRole('button', { name: 'Quiero ser tutor' }).click();
+    await p.getByText('Soy tutor').waitFor();
+    if (!(await p.getByLabel('Nombre completo').isVisible())) throw new Error('"Quiero ser tutor" no abre el registro.');
+    await p.goto(`${URL}/ayuda`);
+    await p.getByRole('heading', { name: 'Preguntas frecuentes' }).waitFor();
+    await p.getByText('¿Puedo cancelar? ¿Me devuelven el dinero?').click();
+    await p.getByText('entre 24 y 2 horas antes, el 50 %', { exact: false }).waitFor();
+    await foto(p, 'web-00-ayuda');
+    await p.setViewportSize({ width: 390, height: 844 });
+    for (const ruta of ['/', '/ayuda']) {
+      await p.goto(`${URL}${ruta}`);
+      await p.locator('.pie-publico').waitFor();
+      const desborde = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (desborde > 0) throw new Error(`${ruta} desborda ${desborde}px a 390 px`);
+    }
+    await foto(p, 'web-00-inicio-movil');
+    await ctx.close();
+    ok('inicio público con cifras y tutores destacados, registro de tutor desde el inicio y preguntas frecuentes');
+  }
+
   // Pantalla de acceso
   {
     const ctx = await navegador.newContext({ viewport: { width: 1360, height: 860 }, deviceScaleFactor: 2 });
     const p = await ctx.newPage();
-    await p.goto(URL);
+    await p.goto(`${URL}/ingresar`);
     await p.getByText('Cuentas de demostración').first().waitFor();
     await foto(p, 'web-01-acceso');
     await ctx.close();
@@ -185,7 +217,7 @@ try {
   const ctxNuevo = await navegador.newContext({ viewport: { width: 1360, height: 860 }, deviceScaleFactor: 2 });
   const nuevo = await ctxNuevo.newPage();
   nuevo.on('pageerror', (e) => errores.push(`[nuevo] ${e.message}`));
-  await nuevo.goto(URL);
+  await nuevo.goto(`${URL}/ingresar`);
   await nuevo.getByRole('tab', { name: 'Crear cuenta' }).click();
   await nuevo.getByText('Soy tutor').click();
   await nuevo.getByLabel('Nombre completo').fill('Mariana Herrera');
@@ -295,7 +327,7 @@ try {
     const ctx = await navegador.newContext({ viewport: { width: 1360, height: 860 } });
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errores.push(`[recuperar] ${e.message}`));
-    await p.goto(URL);
+    await p.goto(`${URL}/ingresar`);
     await p.getByRole('link', { name: '¿Olvidaste tu contraseña?' }).click();
     await p.getByLabel('Correo electrónico').fill('laura@demo.co');
     await p.getByRole('button', { name: 'Enviar código' }).click();
@@ -319,7 +351,7 @@ try {
     await foto(p, 'web-18-terminos');
     await p.getByRole('link', { name: 'Ver la política de tratamiento de datos' }).click();
     await p.getByRole('heading', { name: 'Política de tratamiento de datos personales' }).waitFor();
-    await p.goto(URL);
+    await p.goto(`${URL}/ingresar`);
     await p.getByRole('tab', { name: 'Crear cuenta' }).click();
     await p.getByLabel('Nombre completo').fill('Camila Ortega');
     await p.getByLabel('Correo electrónico').fill(`camila${Date.now()}@demo.co`);

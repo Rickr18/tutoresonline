@@ -15,7 +15,7 @@
     <title>TutoresOn-Line</title>
     <script>
       // iPhone: la app de estudiante y tutor está en /app/ (la misma app móvil, exportada a web).
-      // ?web=1 deja la versión web completa (soporte y administración) y lo recuerda; /descargar, /terminos y /privacidad no se redirigen.
+      // ?web=1 deja la versión web completa (soporte y administración) y lo recuerda; las páginas públicas de información no se redirigen.
       (function () {
         try {
           var clave = 'tutoresonline.version-web';
@@ -23,7 +23,7 @@
           var iphone = /iPhone|iPod/.test(navigator.userAgent);
           var ruta = location.pathname;
           // Si la PWA no está compilada, /app/ cae en esta misma página: no se vuelve a redirigir.
-          if (iphone && localStorage.getItem(clave) !== '1' && !/^\/(descargar|terminos|privacidad|app)/.test(ruta)) location.replace('/app/');
+          if (iphone && localStorage.getItem(clave) !== '1' && !/^\/(descargar|terminos|privacidad|ayuda|app)/.test(ruta)) location.replace('/app/');
         } catch (e) { /* sin almacenamiento: se queda en la web */ }
       })();
     </script>

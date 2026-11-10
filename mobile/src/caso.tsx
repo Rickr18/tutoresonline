@@ -26,7 +26,7 @@ const GRUPO: Record<string, string> = {
   SALA_MEDIACION_ABIERTA: 'sala', SALA_MEDIACION_CREADA: 'soporte', INICIADA: 'bien', FINALIZADA: 'bien', CIERRE_AUTOMATICO: 'alerta',
   CALIFICADA: 'neutro', CALIFICACIONES_PUBLICADAS: 'neutro', DISPUTA_ABIERTA: 'alerta', DESCARGO: 'soporte', PRUEBA_ADJUNTA: 'soporte',
   CASO_TOMADO: 'soporte', CASO_ESCALADO: 'alerta', CASO_RESUELTO: 'soporte', CANCELADA: 'alerta', RECHAZADA: 'alerta',
-  VENCIDA: 'alerta', NO_REALIZADA: 'alerta', SIN_TUTOR: 'alerta', SOLICITUD_DESCARTADA: 'neutro',
+  VENCIDA: 'alerta', NO_REALIZADA: 'alerta', SIN_TUTOR: 'alerta', SOLICITUD_DESCARTADA: 'neutro', RECORDATORIO: 'inicio',
 };
 
 export function Historial({ sesionId }: { sesionId: number }) {

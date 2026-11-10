@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Qr, urlDescarga } from '../qr';
 import { api, type Usuario } from '../api';
 import { useSesion } from '../sesion';
@@ -16,11 +16,13 @@ const DEMOS = [
 
 export default function Acceso() {
   const { entrar } = useSesion();
-  const [modo, setModo] = useState<'entrar' | 'registro'>('entrar');
+  // Los botones de la página de inicio llegan con ?registro=1 (y ?rol=TUTOR).
+  const [params] = useSearchParams();
+  const [modo, setModo] = useState<'entrar' | 'registro'>(params.get('registro') ? 'registro' : 'entrar');
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rol, setRol] = useState<'ESTUDIANTE' | 'TUTOR'>('ESTUDIANTE');
+  const [rol, setRol] = useState<'ESTUDIANTE' | 'TUTOR'>(params.get('rol') === 'TUTOR' ? 'TUTOR' : 'ESTUDIANTE');
   const [acepta, setAcepta] = useState(false);
 
   const enviar = useMutation({
@@ -106,7 +108,7 @@ export default function Acceso() {
         )}
 
         <Typography.Text type="secondary" className="enlaces-legales">
-          <Link to="/terminos">Términos y condiciones</Link> · <Link to="/privacidad">Política de privacidad</Link>
+          <Link to="/">Inicio</Link> · <Link to="/ayuda">Ayuda</Link> · <Link to="/terminos">Términos y condiciones</Link> · <Link to="/privacidad">Política de privacidad</Link>
         </Typography.Text>
         <Typography.Text type="secondary" className="descarga-movil">¿Estás en el teléfono? <Link to="/descargar">Instala la app</Link></Typography.Text>
       </section>

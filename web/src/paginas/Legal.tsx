@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Alert, Card, Typography } from 'antd';
+import { EncabezadoPublico, PiePublico } from '../publica';
 
 /** Misma versión que VERSION_TERMINOS en server/src/db.ts (la que se guarda al aceptar al registrarse). */
 export const VERSION_LEGAL = '2026-11-10';
@@ -24,12 +25,7 @@ function Seccion({ titulo, children }: { titulo: string; children: ReactNode }) 
 function Pagina({ titulo, otro, children }: { titulo: string; otro: { ruta: string; texto: string }; children: ReactNode }) {
   return (
     <div className="descarga legal">
-      <header>
-        <Link to="/" className="marca">
-          <span className="logo">T</span>
-          <span className="nombre">Tutores<em>On-Line</em></span>
-        </Link>
-      </header>
+      <EncabezadoPublico />
       <div>
         <Title level={2} style={{ margin: 0 }}>{titulo}</Title>
         <Text type="secondary">Versión {VERSION_LEGAL}, vigente desde el {FECHA_LEGAL}. </Text>
@@ -38,6 +34,7 @@ function Pagina({ titulo, otro, children }: { titulo: string; otro: { ruta: stri
       <Alert type="info" showIcon
         title="TutoresOn-Line es un prototipo académico. Los pagos son simulados y los datos de contacto son de demostración; este texto no reemplaza la revisión de un abogado." />
       <Card>{children}</Card>
+      <PiePublico />
     </div>
   );
 }

@@ -79,7 +79,7 @@ export default function Recuperar() {
             <Button type="link" block style={{ marginTop: 8 }} onClick={() => { setEnviado(null); cambiar.reset(); }}>Pedir otro código</Button>
           </Form>
         )}
-        <Flex justify="center" style={{ marginTop: 12 }}><Link to="/">Volver a ingresar</Link></Flex>
+        <Flex justify="center" style={{ marginTop: 12 }}><Link to="/ingresar">Volver a ingresar</Link></Flex>
       </Card>
     </Flex>
   );

@@ -154,3 +154,21 @@ ul { list-style: none; margin: 0; padding: 0; }
 .acepta-terminos a, .enlaces-legales a { color: var(--marino); font-weight: 600; text-decoration: underline; }
 .enlaces-legales { text-align: center; font-size: 13px; }
 .legal section + section { margin-top: 6px; }
+
+/* ---------- Páginas públicas: inicio, ayuda, términos ---------- */
+.marca.clara { color: #fff; }
+.encabezado-publico { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.encabezado-publico .enlace-ayuda { color: var(--tinta); font-weight: 600; padding: 0 6px; }
+.encabezado-publico.clara .enlace-ayuda { color: #fff; }
+.pie-publico { display: grid; gap: 10px; justify-items: center; text-align: center; padding: 26px 0 8px; border-top: 1px solid var(--linea); margin-top: 12px; }
+.inicio-publico { background: var(--fondo, #f4f6f9); min-height: 100vh; }
+.inicio-ancho { max-width: 1120px; margin: 0 auto; padding: 0 18px; }
+.inicio-heroe { background: linear-gradient(160deg, var(--marino) 0%, var(--marino-2) 100%); padding: 22px 0 64px; }
+.inicio-heroe-texto { padding-top: clamp(36px, 8vw, 84px); max-width: 760px; }
+.inicio-cuerpo { display: grid; gap: 34px; padding-bottom: 40px; }
+.inicio-cifras { margin-top: -36px; box-shadow: 0 8px 28px rgba(18, 35, 63, .12); }
+.inicio-icono { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 12px;
+  background: #fff4e3; color: #b86b00; font-size: 20px; flex: none; }
+.inicio-icono.grande { width: 56px; height: 56px; font-size: 26px; }
+.inicio-ahora { border-color: var(--ambar); }
+.preguntas .ant-collapse-header { font-weight: 600; }

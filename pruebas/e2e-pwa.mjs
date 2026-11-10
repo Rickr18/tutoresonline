@@ -89,7 +89,7 @@ try {
   const escritorio = await pagina(chromium, { viewport: { width: 1280, height: 800 } }, 'escritorio');
   actual = escritorio;
   await escritorio.goto(`${URL}/`);
-  await escritorio.getByRole('button', { name: 'Ingresar', exact: true }).first().waitFor();
+  await escritorio.getByRole('heading', { name: 'Un tutor para la materia que te está costando.' }).waitFor();
   if (new globalThis.URL(escritorio.url()).pathname !== '/') throw new Error('El escritorio no debe redirigir.');
   ok('en escritorio la web sigue igual');
 

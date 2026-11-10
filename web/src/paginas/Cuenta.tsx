@@ -90,7 +90,7 @@ export default function Cuenta() {
                   {usuario.terminosAceptadosEn
                     ? <>Aceptaste los términos y la política de datos (versión {usuario.terminosVersion}) el {fechaHora(usuario.terminosAceptadosEn)}. </>
                     : null}
-                  <Link to="/terminos" target="_blank">Términos</Link> · <Link to="/privacidad" target="_blank">Privacidad</Link>
+                  <Link to="/ayuda" target="_blank">Ayuda</Link> · <Link to="/terminos" target="_blank">Términos</Link> · <Link to="/privacidad" target="_blank">Privacidad</Link>
                 </Typography.Paragraph>
               </div>
             </Flex>
