@@ -1,0 +1,69 @@
+# Compila el APK de Android de la app móvil y lo publica como release del repositorio.
+# Se ejecuta a mano (Actions > "APK Android" > Run workflow) o al subir una etiqueta v*.
+# Antes de correrlo, define la variable del repositorio API_URL (Settings > Secrets and variables > Actions > Variables)
+# con la URL pública del servidor, por ejemplo https://tutoresonline.onrender.com
+
+name: APK Android
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      EXPO_PUBLIC_API_URL: ${{ vars.API_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Revisar tipos
+        run: npx tsc --noEmit
+
+      - name: Generar el proyecto nativo
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Compilar APK (release)
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Renombrar
+        run: cp android/app/build/outputs/apk/release/app-release.apk TutoresOn-Line.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TutoresOn-Line-apk
+          path: mobile/TutoresOn-Line.apk
+
+      - name: Publicar release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('apk-{0}', github.run_number) }}
+          name: TutoresOn-Line APK ${{ github.ref_type == 'tag' && github.ref_name || github.run_number }}
+          body: |
+            APK de la app móvil de TutoresOn-Line.
+            Servidor configurado: ${{ vars.API_URL }}
+            Instalación: descargar TutoresOn-Line.apk en el teléfono y permitir la instalación de apps de origen desconocido.
+          files: mobile/TutoresOn-Line.apk

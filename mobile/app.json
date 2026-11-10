@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "TutoresOn-Line",
+    "slug": "tutoresonline",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "co.tutoresonline.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#12233f",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "co.tutoresonline.app",
+      "versionCode": 1
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TutoresOn-Line usa tus fotos para adjuntar pruebas en un caso de soporte.",
+          "cameraPermission": "TutoresOn-Line usa la cámara para tomar fotos de pruebas en un caso de soporte."
+        }
+      ]
+    ],
+    "scheme": "tutoresonline",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#12233f"
+    }
+  }
+}

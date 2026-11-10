@@ -1,0 +1,13 @@
+node_modules/
+dist/
+server/data/
+.env
+*.log
+.DS_Store
+tmp-movil/
+
+# Material privado de la entrega: no se publica en GitHub.
+# CLAUDE.md tiene rutas del PC, cuentas y notas de trabajo; docs/ tiene la propuesta, la guía y las capturas.
+CLAUDE.md
+docs/
+.claude/

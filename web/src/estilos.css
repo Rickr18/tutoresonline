@@ -1,0 +1,149 @@
+/*
+ * Estilos propios que complementan a Ant Design: la base, el marco, la pantalla de acceso y las piezas que antd no trae
+ * (fila de sesión, burbujas del chat, columnas del resumen). Los controles, tablas, tarjetas y avisos son de antd.
+ */
+:root {
+  --marino: #12233f;
+  --marino-2: #1b3358;
+  --ambar: #f2a33a;
+  --verde: #1c8c7c;
+  --rojo: #c0392b;
+  --tinta: #1a2433;
+  --tenue: #5f6b7c;
+  --linea: #e2e7ee;
+  --fondo: #f4f6f9;
+  --papel: #ffffff;
+  --radio: 12px;
+  --sombra: 0 1px 2px rgba(18, 35, 63, .06), 0 6px 20px rgba(18, 35, 63, .06);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--fondo); color: var(--tinta);
+  font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+h1, h2, h3, p { margin: 0; }
+a { color: #1d3a66; text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul { list-style: none; margin: 0; padding: 0; }
+.nums { font-variant-numeric: tabular-nums; }
+
+/* Enlaces que envuelven una tarjeta o una fila completa: sin color de enlace. */
+.marca, .quien, .fila-sesion, .tutor-tarjeta, .acceso-qr { color: inherit; }
+.marca:hover, .quien:hover, .fila-sesion:hover, .tutor-tarjeta:hover, .acceso-qr:hover { text-decoration: none; }
+
+/* ---------- Marco ---------- */
+.barra { position: sticky; top: 0; z-index: 20; color: #fff; line-height: normal; }
+.barra-interior { max-width: 1180px; margin: 0 auto; padding: 0 20px; height: 62px; display: flex; align-items: center; gap: 22px; }
+.marca { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; flex: none; }
+.marca .logo {
+  width: 32px; height: 32px; border-radius: 9px; background: var(--ambar); color: var(--marino);
+  display: grid; place-items: center; font-weight: 800; font-size: 1.1rem;
+}
+.marca .nombre { font-size: 1.05rem; letter-spacing: -.01em; }
+.marca .nombre em { font-style: normal; color: var(--ambar); }
+.barra .marca { color: #fff; }
+.quien { display: flex; align-items: center; gap: 9px; color: #fff; }
+.quien .datos { display: flex; flex-direction: column; line-height: 1.2; }
+.quien .datos b { font-size: .9rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quien .datos small { color: #a9b6cb; font-size: .76rem; }
+.contenido { max-width: 1180px; width: 100%; margin: 0 auto; padding: 28px 20px 64px; }
+.pantalla-completa { min-height: 100vh; display: grid; place-items: center; }
+
+/* Avisos flotantes (alertas de antd apiladas en la esquina). */
+.avisos { position: fixed; right: 18px; bottom: 18px; z-index: 1100; display: flex; flex-direction: column; gap: 10px; width: 360px; max-width: calc(100vw - 36px); }
+.avisos .aviso { animation: subir .2s ease-out; }
+@keyframes subir { from { transform: translateY(8px); opacity: 0; } }
+
+/* ---------- Acceso ---------- */
+.acceso { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+.acceso-marca {
+  background: linear-gradient(160deg, var(--marino) 0%, #0c1830 100%); color: #fff;
+  padding: 56px clamp(28px, 6vw, 80px); display: flex; flex-direction: column; justify-content: center; gap: 22px;
+}
+.acceso-marca h1 { font-size: clamp(1.8rem, 3.2vw, 2.6rem); line-height: 1.2; max-width: 16ch; }
+.acceso-marca > p { color: #c4cfe0; max-width: 46ch; font-size: 1.02rem; }
+.acceso-marca ul { display: grid; gap: 14px; margin-top: 8px; max-width: 46ch; }
+.acceso-marca li { padding-left: 16px; border-left: 3px solid var(--ambar); display: flex; flex-direction: column; }
+.acceso-marca li span { color: #a9b6cb; font-size: .92rem; }
+.acceso-forma { padding: 48px clamp(22px, 5vw, 72px); display: flex; flex-direction: column; justify-content: center; gap: 18px; max-width: 560px; width: 100%; margin: 0 auto; }
+.demos { border-top: 1px solid var(--linea); padding-top: 18px; display: grid; gap: 10px; }
+.acceso-qr { display: flex; align-items: center; gap: 16px; margin-top: 10px; max-width: 46ch; }
+.acceso-qr span { color: #a9b6cb; font-size: .9rem; }
+.acceso-qr b { display: block; color: #fff; }
+.descarga-movil { display: none; text-align: center; }
+.descarga { max-width: 860px; margin: 0 auto; padding: 28px 18px 56px; display: grid; gap: 22px; }
+
+/* ---------- Formularios y piezas ---------- */
+.forma { display: grid; gap: 16px; }
+.modal-cuerpo { display: grid; gap: 16px; }
+.pago { border: 1px solid var(--linea); border-radius: var(--radio); padding: 14px; margin: 0; display: grid; gap: 12px; min-width: 0; }
+.pago legend { font-weight: 600; font-size: .9rem; padding: 0 6px; }
+.cabecera { margin-bottom: 22px; }
+.seccion { margin-top: 30px; }
+.centro { max-width: 620px; margin: 0 auto; }
+.estrellas { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.estrellas.grande { font-size: 1.2rem; }
+.reloj { display: inline-flex; flex: none; }
+.cita { margin: 0 0 8px; padding: 10px 14px; border-left: 4px solid var(--ambar); background: #fffaf0; border-radius: 0 8px 8px 0; color: #3a3326; white-space: pre-wrap; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.kpi .ant-statistic-content { font-variant-numeric: tabular-nums; }
+/* Una alerta que empieza con <b> usa esa parte como título en su propia línea. */
+.alerta .ant-alert-title > b:first-child { display: block; }
+.solicitud { border-left: 4px solid var(--ambar); }
+.fila-clic { cursor: pointer; }
+
+/* ---------- Fila de sesión ---------- */
+.lista { display: grid; gap: 10px; }
+.fila-sesion {
+  display: grid; grid-template-columns: auto minmax(0, 1.5fr) minmax(0, 1fr) auto auto; gap: 16px; align-items: center;
+  background: var(--papel); border: 1px solid var(--linea); border-radius: var(--radio); padding: 13px 16px; transition: box-shadow .15s, border-color .15s;
+}
+.fila-sesion:hover { border-color: #c5cedb; box-shadow: var(--sombra); }
+.fila-sesion > span { display: flex; flex-direction: column; min-width: 0; }
+.fila-sesion > span > span { color: var(--tenue); font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fila-sesion .precio { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---------- Resumen del administrador ---------- */
+.columnas { display: flex; align-items: flex-end; gap: 6px; height: 150px; }
+.columnas > div { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; min-width: 0; }
+.columnas i { width: 100%; max-width: 34px; background: var(--ambar); border-radius: 5px 5px 0 0; min-height: 3px; }
+.columnas small { color: var(--tenue); font-size: .7rem; white-space: nowrap; }
+.columnas b { font-size: .76rem; }
+
+/* ---------- Conversación de los casos ---------- */
+.conversacion { display: grid; gap: 10px; }
+.chat { display: flex; flex-direction: column; gap: 8px; max-height: 460px; overflow-y: auto; padding: 4px 2px; }
+.chat-vacio { text-align: center; padding: 18px 0; }
+.burbuja { max-width: 88%; align-self: flex-start; background: #f1f4f8; border-radius: 12px 12px 12px 4px; padding: 8px 12px; display: grid; gap: 4px; }
+.burbuja small { color: var(--tenue); font-size: .74rem; }
+.burbuja p { margin: 0; white-space: pre-wrap; font-size: .93rem; }
+.burbuja.equipo { background: #eef0fd; }
+.burbuja.mia { align-self: flex-end; background: var(--marino); color: #fff; border-radius: 12px 12px 4px 12px; }
+.burbuja.mia small { color: #b9c5d9; }
+.burbuja.interna { background: #fff6e3; color: #4d3a10; }
+.burbuja.interna.mia { background: #f6e3b8; }
+.burbuja.interna.mia small { color: #7a5b1c; }
+.burbuja.mia .ant-typography { color: #b9c5d9; }
+.redactar { border-top: 1px solid var(--linea); padding-top: 10px; }
+
+/* ---------- Pantallas angostas ---------- */
+@media (max-width: 980px) {
+  .quien .datos { display: none; }
+  .interruptor .rotulo { display: none; }
+}
+@media (max-width: 760px) {
+  .acceso { grid-template-columns: 1fr; }
+  .acceso-marca { padding: 36px 24px; }
+  .acceso-marca ul, .acceso-qr { display: none; }
+  .descarga-movil { display: block; }
+  .barra-interior { flex-wrap: wrap; height: auto; padding: 10px 14px 0; gap: 0 12px; }
+  .barra-derecha { margin-left: auto; }
+  .barra .menu { order: 3; flex-basis: 100%; line-height: 44px; }
+  .contenido { padding: 20px 14px 56px; }
+  .fila-sesion { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 6px; }
+  .fila-sesion .cuando { grid-column: 2 / 3; }
+  .fila-sesion .precio { grid-column: 3; grid-row: 1; text-align: right; }
+  .burbuja { max-width: 100%; }
+}

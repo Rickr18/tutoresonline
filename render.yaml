@@ -1,0 +1,14 @@
+# Blueprint de Render: un servicio web Docker en el plan gratuito.
+# Render > New > Blueprint > elegir este repositorio.
+services:
+  - type: web
+    name: tutoresonline
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /api/salud
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MODO_DEMO
+        value: "1"

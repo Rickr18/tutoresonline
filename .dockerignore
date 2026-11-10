@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+server/data
+mobile
+docs
+pruebas
+.github
+*.md
