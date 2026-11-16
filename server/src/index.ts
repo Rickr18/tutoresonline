@@ -19,6 +19,7 @@ import {
 import { PARAMETROS, DEFINICION, type ClaveParametro } from './parametros.js';
 import { duracionTexto, fechaHoraCo, horaCo, pesos } from './formato.js';
 import { iniciarTareas } from './tareas.js';
+import { versionApp } from './version.js';
 import { montarCasos, montarDescargas, emitirCaso } from './casos.js';
 
 sembrar();
@@ -42,6 +43,9 @@ const TEMA_MIN = 20;
 api.get('/salud', (_req, res) => res.json({ ok: true, modoDemo: MODO_DEMO, hora: ahoraIso() }));
 
 api.get('/materias', (_req, res) => res.json(todos('SELECT id, nombre, area FROM materias WHERE activa = 1 ORDER BY area, nombre')));
+
+/** Última versión del APK publicada y enlace de descarga: la app móvil avisa cuando la suya es más vieja. */
+api.get('/version', async (_req, res, next) => { try { res.json(await versionApp()); } catch (e) { next(e); } });
 
 /** Valores vigentes de los parámetros del negocio (RF-M11-07), para que las pantallas muestren los plazos reales. */
 api.get('/parametros', (_req, res) => res.json(Object.fromEntries(PARAMETROS.map((p) => [p.clave, param(p.clave)]))));

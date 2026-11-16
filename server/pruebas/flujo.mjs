@@ -33,6 +33,10 @@ r = await api('POST', '/auth/login', null, { email: correo, password: 'Clave1234
 check('la cuenta nueva guarda la versión y la fecha de aceptación', r.d.usuario?.terminosVersion === '2026-11-10' && !!r.d.usuario?.terminosAceptadosEn, JSON.stringify(r.d.usuario));
 check('las cuentas sembradas traen la aceptación', !!ana.usuario.terminosVersion && !!carlos.usuario.terminosVersion, JSON.stringify(ana.usuario));
 
+// Última versión del APK para el aviso de la app (se lee de GitHub Releases; sin conexión, ultima es null)
+r = await api('GET', '/version');
+check('versión del APK pública con enlace de descarga', r.s === 200 && r.d.url.endsWith('/releases/latest/download/TutoresOn-Line.apk') && (r.d.ultima === null || /^\d+\.\d+\.\d+$/.test(r.d.ultima)), JSON.stringify(r.d));
+
 // Página de inicio pública
 r = await api('GET', '/vitrina');
 check('vitrina pública sin token', r.s === 200 && r.d.tutores === 6 && r.d.destacados.length === 4, JSON.stringify(r).slice(0, 200));
@@ -174,7 +178,8 @@ r = await api('POST', '/admin/usuarios', admin.token, { nombre: 'Nuevo Agente', 
 check('admin crea cuenta de soporte', r.s === 201 && r.d.rol === 'SOPORTE', JSON.stringify(r));
 
 // Cancelación RN-06: reserva lejana (>24 h) -> 100 %
-const lejos = fr.d.find(f => Date.parse(f) - Date.now() > 25 * 3600e3);
+// Una hora a más de 25 h cuya hora siguiente también está libre, para que quepa la sesión de 90 minutos.
+const lejos = fr.d.find(f => Date.parse(f) - Date.now() > 25 * 3600e3 && fr.d.includes(new Date(Date.parse(f) + 3600e3).toISOString()));
 r = await api('POST', '/sesiones', luis.token, { tutorId: idCarlos, materiaId: 2, inicio: lejos, duracionMin: 90, modalidad: 'PRESENCIAL', tema: 'Integración por partes', pago: { metodo: 'NEQUI', numero: '3001234567' } });
 check('reserva 90 min presencial', r.d?.precio === 52500 && r.d.reembolsoSiCancela === 100, JSON.stringify(r));
 const s2 = r.d.id;

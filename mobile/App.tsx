@@ -20,6 +20,7 @@ import Panel from './src/pantallas/Panel';
 import Ingresos from './src/pantallas/Ingresos';
 import Cuenta from './src/pantallas/Cuenta';
 import { CambioObligatorio } from './src/pantallas/Clave';
+import { AvisoVersion } from './src/version';
 
 const consultas = new QueryClient({
   defaultOptions: {
@@ -131,6 +132,7 @@ export default function App() {
       <QueryClientProvider client={consultas}>
         <ProveedorSesion>
           <Raiz />
+          <AvisoVersion />
         </ProveedorSesion>
       </QueryClientProvider>
     </SafeAreaProvider>
