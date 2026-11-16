@@ -2,7 +2,6 @@
 
 Plataforma de tutorías académicas que conecta estudiantes con tutores verificados. Permite reservar sesiones programadas según la agenda del tutor y pedir un tutor de inmediato: la solicitud llega a los tutores en línea de la materia y el primero que acepta se queda con la sesión. Incluye pagos retenidos con comisión del 15 %, calificaciones mutuas, disputas y un panel de administración.
 
-Proyecto final de Gestión de Proyectos Tecnológicos. Autor: Rick Rios.
 
 ## Estructura
 
