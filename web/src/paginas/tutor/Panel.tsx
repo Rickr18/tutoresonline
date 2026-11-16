@@ -108,7 +108,7 @@ export default function Panel() {
         <Seccion titulo="Solicitudes inmediatas">
           {!t?.enLinea ? <Vacio titulo="Estás desconectado">Activa el interruptor “En línea” para empezar a recibir solicitudes.</Vacio>
             : demanda.isPending ? <Cargando />
-              : demanda.data?.length === 0 ? <Vacio titulo="No hay solicitudes abiertas">Cuando un estudiante pida ayuda en una de tus materias, la verás aquí con 45 segundos para aceptar.</Vacio>
+              : demanda.data?.length === 0 ? <Vacio titulo="No hay solicitudes abiertas">Cuando te toque el turno de una solicitud de tus materias, la verás aquí con 45 segundos para aceptarla o pasarla.</Vacio>
                 : <div className="lista">{demanda.data?.map((d) => <Solicitud key={d.id} d={d} />)}</div>}
         </Seccion>
       )}

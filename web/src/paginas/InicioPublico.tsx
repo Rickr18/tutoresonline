@@ -98,7 +98,7 @@ export default function InicioPublico() {
             <span className="inicio-icono grande"><ThunderboltOutlined /></span>
             <div style={{ flex: 1, minWidth: 220 }}>
               <Title level={4} style={{ margin: 0 }}>¿Tienes un parcial mañana? Pide un tutor ahora</Title>
-              <Text type="secondary">Tu solicitud llega a todos los tutores en línea de la materia. Si nadie acepta en 45 segundos, no se cobra nada.</Text>
+              <Text type="secondary">Tu solicitud se ofrece a los tutores en línea de la materia, uno por uno. Si nadie acepta en 5 minutos, no se cobra nada.</Text>
             </div>
             <Button type="primary" size="large" onClick={() => ir('/ingresar?registro=1')}>Pedir ayuda</Button>
           </Flex>

@@ -1,7 +1,7 @@
 // Copia de web/src/formato.ts: mismas reglas de fecha (hora de Colombia) y dinero en la web y en el móvil.
 /* Fechas y dinero. La plataforma trabaja con la hora de Colombia (UTC-5, sin horario de verano). */
 
-import type { Decision, EstadoCaso, EstadoPago, EstadoSesion, Modalidad, Verificacion } from './tipos';
+import type { Decision, EstadoCaso, EstadoPago, EstadoSesion, Modalidad, Moderacion, Verificacion } from './tipos';
 
 const DESFASE = -5 * 3600_000;
 export const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -123,6 +123,15 @@ export const DECISION: Record<Decision, { texto: string; corto: string }> = {
   REEMBOLSO_TOTAL: { texto: 'Reembolso total al estudiante', corto: 'Reembolso total' },
   REEMBOLSO_PARCIAL: { texto: 'Reembolso del 50 % al estudiante y 50 % para el tutor', corto: 'Reembolso del 50 %' },
   LIBERAR: { texto: 'Pago completo al tutor', corto: 'Pago al tutor' },
+};
+
+/** Estado de moderación de un comentario (RF-M08-07, RF-M11-05). */
+export const MODERACION: Record<Moderacion, { texto: string; tono: 'espera' | 'bien' | 'activo' | 'neutro' | 'mal' }> = {
+  VISIBLE: { texto: 'Publicado', tono: 'bien' },
+  RETENIDA: { texto: 'Retenido por el filtro', tono: 'espera' },
+  REPORTADA: { texto: 'Reportado', tono: 'espera' },
+  OCULTA: { texto: 'Oculto', tono: 'neutro' },
+  ELIMINADA: { texto: 'Eliminado', tono: 'mal' },
 };
 
 export const ROL_TEXTO: Record<string, string> = { ESTUDIANTE: 'Estudiante', TUTOR: 'Tutor', SOPORTE: 'Soporte', ADMIN: 'Administrador' };

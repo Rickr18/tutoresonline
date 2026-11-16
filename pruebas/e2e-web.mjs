@@ -134,6 +134,19 @@ try {
   await carlos.getByRole('button', { name: 'Iniciar la sesión' }).waitFor();
   await ana.getByText('Sala de la sesión').first().waitFor({ timeout: 8000 });
   ok('tutor acepta y el estudiante ve el cambio sin recargar');
+
+  // Reprogramación (RF-M05-07): el estudiante propone otra hora y el tutor la acepta
+  await ana.getByRole('button', { name: 'Proponer otra fecha' }).click();
+  await ana.locator('#reprogramar-fecha').click();
+  await ana.locator('.ant-select-dropdown:visible .ant-select-item-option').first().click();
+  await ana.getByRole('button', { name: 'Enviar la propuesta' }).click();
+  await ana.getByText('Propusiste cambiar la fecha').first().waitFor();
+  await carlos.getByRole('button', { name: 'Aceptar la nueva fecha' }).waitFor({ timeout: 8000 });
+  await carlos.addStyleTag({ content: '.avisos { display: none !important; }' });
+  await foto(carlos, 'web-24-reprogramacion');
+  await carlos.getByRole('button', { name: 'Aceptar la nueva fecha' }).click();
+  await carlos.getByText('propone cambiar la fecha').first().waitFor({ state: 'hidden' });
+  ok('el estudiante propone otra fecha y el tutor la acepta');
   await carlos.getByRole('button', { name: 'Iniciar la sesión' }).click();
   await carlos.getByRole('button', { name: 'Finalizar la sesión' }).click();
   await carlos.getByRole('button', { name: 'Calificar al estudiante' }).waitFor();
@@ -150,10 +163,15 @@ try {
   await carlos.getByRole('radio', { name: '4 de 5' }).click();
   await carlos.getByRole('button', { name: 'Enviar calificación' }).click();
   await carlos.getByText('Calificación que recibiste').first().waitFor();
+  // RF-M08-07: quien recibe el comentario lo puede reportar; queda oculto hasta la moderación
+  await carlos.getByRole('button', { name: 'Reportar este comentario' }).click();
+  await carlos.getByLabel('Motivo').fill('El comentario menciona ejercicios que no se dejaron en la clase.');
+  await carlos.getByRole('button', { name: 'Reportar', exact: true }).click();
+  await carlos.getByText('Reportado: oculto mientras soporte lo revisa').first().waitFor();
   await ana.reload();
   await ana.getByText('Calificación que recibiste').first().waitFor();
   await foto(ana, 'web-05-sesion-finalizada', true);
-  ok('calificaciones de ambos lados publicadas juntas');
+  ok('calificaciones de ambos lados publicadas juntas y el tutor reporta el comentario');
 
   // Disputa por parte del estudiante
   await ana.getByRole('button', { name: 'Reportar un problema' }).click();
@@ -312,6 +330,42 @@ try {
   await admin.addStyleTag({ content: '.avisos { display: none !important; }' });
   await foto(admin, 'web-13-admin-resumen', true);
   ok('administrador libera un pago, suspende y reactiva una cuenta');
+
+  // Moderación de comentarios (RF-M11-05) y manual de funcionamiento
+  await soporte.goto(`${URL}/moderacion`);
+  const reportado = soporte.locator('.moderacion tbody tr', { hasText: 'Explica con calma' });
+  await reportado.waitFor();
+  await soporte.addStyleTag({ content: '.avisos { display: none !important; }' });
+  await foto(soporte, 'web-25-moderacion');
+  await reportado.getByRole('button', { name: 'Revisar' }).click();
+  await soporte.getByLabel('Motivo para el autor').fill('Es una opinión sobre la clase y no incumple las normas.');
+  await soporte.getByRole('button', { name: 'Guardar la decisión' }).click();
+  await reportado.waitFor({ state: 'detached' });
+  await soporte.goto(`${URL}/manual?tab=procesos&p=P-04`);
+  await soporte.locator('.diagrama svg').waitFor({ timeout: 20000 });
+  await foto(soporte, 'web-26-manual-proceso');
+  await soporte.getByRole('tab', { name: 'Requerimientos (RF y RNF)' }).click();
+  await soporte.locator('#manual-buscar').fill('reprogramar');
+  await soporte.locator('code:visible', { hasText: 'RF-M05-07' }).first().waitFor();
+  await foto(soporte, 'web-27-manual-requerimientos');
+  await soporte.getByRole('tab', { name: 'Estados' }).click();
+  await soporte.locator('code:visible', { hasText: 'PENDIENTE_ACEPTACION' }).first().waitFor();
+  ok('soporte aprueba un comentario reportado y consulta el manual con los procesos, requerimientos y estados');
+
+  // Parámetros del negocio (RF-M11-07): un cambio programado con fecha de vigencia
+  await admin.goto(`${URL}/admin/parametros`);
+  const tolerancia = admin.locator('.parametros tbody tr', { hasText: 'Tolerancia de inasistencia' });
+  await tolerancia.getByRole('button', { name: 'Cambiar' }).click();
+  await admin.getByLabel(/Valor nuevo/).fill('20');
+  await admin.getByText('En una fecha').click();
+  const manana = new Date(Date.now() - 5 * 3600e3 + 86400e3).toISOString().slice(0, 16);
+  await admin.getByLabel('Fecha de vigencia (hora de Colombia)').fill(manana);
+  await admin.getByLabel('Motivo del cambio').fill('Prueba de un cambio programado para mañana.');
+  await admin.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await tolerancia.getByText(/20 desde/).waitFor();
+  await admin.addStyleTag({ content: '.avisos { display: none !important; }' });
+  await foto(admin, 'web-28-admin-parametros');
+  ok('administración programa un cambio de parámetro con fecha de vigencia');
 
   // Administrador principal: bitácora y catálogo de materias
   await admin.goto(`${URL}/admin/actividad`);

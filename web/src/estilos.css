@@ -172,3 +172,10 @@ ul { list-style: none; margin: 0; padding: 0; }
 .inicio-icono.grande { width: 56px; height: 56px; font-size: 26px; }
 .inicio-ahora { border-color: var(--ambar); }
 .preguntas .ant-collapse-header { font-weight: 600; }
+
+/* ---------- Manual de funcionamiento ---------- */
+.manual .ant-tabs-nav { margin-bottom: 18px; }
+.manual-tabla td { vertical-align: top; }
+.pasos-manual { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 8px; }
+.diagrama { min-height: 120px; }
+.diagrama svg { max-width: 100%; height: auto; }

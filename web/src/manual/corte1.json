@@ -1,0 +1,2509 @@
+{
+ "fuente": "TutoresOn-Line, Corte 1: requerimientos y procesos",
+ "actores": [
+  {
+   "id": "ACT-01",
+   "nombre": "Estudiante",
+   "descripcion": "Usuario que requiere apoyo académico. Busca, reserva, recibe y califica tutorías.",
+   "objetivo": "Obtener ayuda académica de calidad, rápido y con confianza."
+  },
+  {
+   "id": "ACT-02",
+   "nombre": "Tutor",
+   "descripcion": "Usuario que ofrece servicios de tutoría. Publica su perfil, define precios y disponibilidad, atiende sesiones y recibe pagos.",
+   "objetivo": "Monetizar su conocimiento con flexibilidad horaria."
+  },
+  {
+   "id": "ACT-03",
+   "nombre": "Administrador",
+   "descripcion": "Personal de la plataforma. Verifica tutores, modera contenido, resuelve conflictos, supervisa pagos y consulta indicadores.",
+   "objetivo": "Garantizar un ecosistema confiable, seguro y rentable."
+  },
+  {
+   "id": "ACT-04",
+   "nombre": "Visitante",
+   "descripcion": "Usuario no autenticado que explora la plataforma antes de registrarse.",
+   "objetivo": "Evaluar la propuesta de valor antes de crear una cuenta."
+  }
+ ],
+ "externas": [
+  {
+   "id": "EXT-01",
+   "nombre": "Pasarela de pagos",
+   "servicio": "Procesamiento de cobros a estudiantes y dispersión de pagos a tutores.",
+   "intercambio": "Envía: solicitud de cobro, orden de dispersión. Recibe: confirmación o rechazo de transacción, *webhooks* de estado."
+  },
+  {
+   "id": "EXT-02",
+   "nombre": "Servicio de videoconferencia",
+   "servicio": "Generación de salas virtuales para tutorías en línea.",
+   "intercambio": "Envía: solicitud de creación de sala. Recibe: enlace de acceso, identificador de sala, duración efectiva de la sesión."
+  },
+  {
+   "id": "EXT-03",
+   "nombre": "Servicio de geolocalización y mapas",
+   "servicio": "Ubicación de tutores cercanos y cálculo de distancias para la modalidad presencial.",
+   "intercambio": "Envía: coordenadas y radio de búsqueda. Recibe: distancias, direcciones aproximadas, mapa."
+  },
+  {
+   "id": "EXT-04",
+   "nombre": "Servicio de mensajería",
+   "servicio": "Envío de correo electrónico, notificaciones push y SMS.",
+   "intercambio": "Envía: destinatario, plantilla y variables del mensaje. Recibe: acuse de entrega o error."
+  },
+  {
+   "id": "EXT-05",
+   "nombre": "Proveedor de identidad",
+   "servicio": "Autenticación federada (Google, Microsoft) y verificación de correo institucional.",
+   "intercambio": "Envía: solicitud de autenticación. Recibe: token de identidad y datos básicos del perfil."
+  },
+  {
+   "id": "EXT-06",
+   "nombre": "Servicio de verificación documental",
+   "servicio": "Validación de identidad y de títulos académicos de los tutores.",
+   "intercambio": "Envía: documento e identidad declarada. Recibe: resultado de la validación."
+  }
+ ],
+ "modulos": [
+  {
+   "id": "M01",
+   "nombre": "Gestión de cuentas y autenticación",
+   "requerimientos": [
+    {
+     "id": "RF-M01-01",
+     "texto": "El sistema debe permitir el registro de un usuario mediante nombre completo, correo electrónico, contraseña y aceptación de términos y condiciones.",
+     "actor": "Visitante",
+     "prioridad": "M",
+     "criterio": "Creada la cuenta, el usuario aparece en estado PENDIENTE_VERIFICACION y no puede operar hasta confirmar su correo."
+    },
+    {
+     "id": "RF-M01-02",
+     "texto": "El sistema debe enviar un correo de confirmación con un enlace de activación de vigencia limitada.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El enlace expira a las 24 horas; usado un enlace expirado, el sistema ofrece reenviar uno nuevo."
+    },
+    {
+     "id": "RF-M01-03",
+     "texto": "El sistema debe permitir el registro y el inicio de sesión mediante proveedores de identidad externos (Google, Microsoft).",
+     "actor": "Visitante",
+     "prioridad": "S",
+     "criterio": "Autenticado por un proveedor externo, se crea la cuenta sin exigir contraseña y con el correo ya verificado."
+    },
+    {
+     "id": "RF-M01-04",
+     "texto": "El sistema debe permitir al usuario elegir su rol inicial: Estudiante, Tutor o ambos.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "M",
+     "criterio": "Elegido el rol Tutor, el sistema encadena automáticamente el proceso de creación de perfil profesional (P-02)."
+    },
+    {
+     "id": "RF-M01-05",
+     "texto": "El sistema debe permitir la recuperación de contraseña mediante un enlace de un solo uso enviado al correo registrado.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "M",
+     "criterio": "El enlace caduca a los 60 minutos o al primer uso, lo que ocurra primero."
+    },
+    {
+     "id": "RF-M01-06",
+     "texto": "El sistema debe permitir que una misma cuenta opere con rol dual (Estudiante y Tutor) y alternar entre ambas vistas sin cerrar sesión.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "S",
+     "criterio": "El cambio de vista conserva la sesión activa y no requiere reautenticación."
+    },
+    {
+     "id": "RF-M01-07",
+     "texto": "El sistema debe permitir al usuario editar sus datos de perfil, foto y preferencias de notificación.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "M",
+     "criterio": "El cambio de correo electrónico exige verificar la nueva dirección antes de aplicarse."
+    },
+    {
+     "id": "RF-M01-08",
+     "texto": "El sistema debe permitir al usuario desactivar o eliminar su cuenta.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "S",
+     "criterio": "La eliminación se bloquea si existen sesiones futuras confirmadas o saldos pendientes de liquidar."
+    },
+    {
+     "id": "RF-M01-09",
+     "texto": "El sistema debe bloquear temporalmente la cuenta tras cinco intentos fallidos consecutivos de inicio de sesión.",
+     "actor": "Sistema",
+     "prioridad": "S",
+     "criterio": "El bloqueo dura 15 minutos y se notifica al usuario por correo."
+    }
+   ]
+  },
+  {
+   "id": "M02",
+   "nombre": "Perfil profesional y verificación del tutor",
+   "requerimientos": [
+    {
+     "id": "RF-M02-01",
+     "texto": "El sistema debe permitir al tutor construir un perfil profesional con formación académica, experiencia docente, descripción personal y foto.",
+     "actor": "Tutor",
+     "prioridad": "M",
+     "criterio": "El perfil no puede publicarse si falta alguno de los campos obligatorios."
+    },
+    {
+     "id": "RF-M02-02",
+     "texto": "El sistema debe permitir al tutor asociar las materias que domina, indicando para cada una el nivel educativo atendido.",
+     "actor": "Tutor",
+     "prioridad": "M",
+     "criterio": "Las materias se seleccionan de un catálogo controlado; el tutor puede solicitar el alta de una materia nueva al administrador."
+    },
+    {
+     "id": "RF-M02-03",
+     "texto": "El sistema debe permitir al tutor cargar documentos de soporte: cédula, títulos, certificaciones.",
+     "actor": "Tutor",
+     "prioridad": "M",
+     "criterio": "Se aceptan PDF, JPG y PNG de hasta 10 MB por archivo."
+    },
+    {
+     "id": "RF-M02-04",
+     "texto": "El sistema debe permitir al tutor definir el precio por hora de sus tutorías, diferenciado por materia si así lo desea.",
+     "actor": "Tutor",
+     "prioridad": "M",
+     "criterio": "El precio debe estar dentro del rango mínimo y máximo definido por la plataforma."
+    },
+    {
+     "id": "RF-M02-05",
+     "texto": "El sistema debe permitir al tutor seleccionar las modalidades en las que trabaja: virtual, presencial o ambas.",
+     "actor": "Tutor",
+     "prioridad": "M",
+     "criterio": "Elegida la modalidad presencial, es obligatorio registrar una zona de cobertura."
+    },
+    {
+     "id": "RF-M02-06",
+     "texto": "El sistema debe someter todo perfil de tutor nuevo o modificado en campos sensibles a revisión del administrador antes de publicarlo.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Mientras el perfil está en revisión no aparece en los resultados de búsqueda."
+    },
+    {
+     "id": "RF-M02-07",
+     "texto": "El sistema debe permitir al administrador aprobar, rechazar con motivo o solicitar corrección de un perfil de tutor.",
+     "actor": "Administrador",
+     "prioridad": "M",
+     "criterio": "Rechazado el perfil, el tutor recibe una notificación con el motivo y puede corregir y reenviar."
+    },
+    {
+     "id": "RF-M02-08",
+     "texto": "El sistema debe mostrar un distintivo de \"tutor verificado\" en los perfiles cuya documentación fue validada.",
+     "actor": "Sistema",
+     "prioridad": "S",
+     "criterio": "El distintivo se retira automáticamente si vence la vigencia de un documento."
+    }
+   ]
+  },
+  {
+   "id": "M03",
+   "nombre": "Búsqueda y descubrimiento de tutores",
+   "requerimientos": [
+    {
+     "id": "RF-M03-01",
+     "texto": "El sistema debe permitir buscar tutores por materia mediante texto libre con sugerencias automáticas.",
+     "actor": "Estudiante / Visitante",
+     "prioridad": "M",
+     "criterio": "La sugerencia aparece a partir del tercer carácter escrito."
+    },
+    {
+     "id": "RF-M03-02",
+     "texto": "El sistema debe permitir filtrar los resultados por nivel educativo, modalidad, rango de precio, calificación mínima, idioma y disponibilidad.",
+     "actor": "Estudiante",
+     "prioridad": "M",
+     "criterio": "Los filtros son combinables y el conteo de resultados se actualiza al aplicarlos."
+    },
+    {
+     "id": "RF-M03-03",
+     "texto": "El sistema debe permitir ordenar los resultados por relevancia, precio, calificación o cercanía geográfica.",
+     "actor": "Estudiante",
+     "prioridad": "S",
+     "criterio": "La ordenación por cercanía solo se ofrece cuando el filtro de modalidad es presencial."
+    },
+    {
+     "id": "RF-M03-04",
+     "texto": "El sistema debe mostrar en cada resultado: nombre, foto, materias, precio, calificación promedio, número de tutorías realizadas y estado de conexión.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El estado \"en línea\" refleja la disponibilidad inmediata del tutor con un retardo máximo de 60 segundos."
+    },
+    {
+     "id": "RF-M03-05",
+     "texto": "El sistema debe permitir consultar el perfil detallado del tutor, incluyendo comentarios de estudiantes anteriores.",
+     "actor": "Estudiante / Visitante",
+     "prioridad": "M",
+     "criterio": "Los comentarios se muestran paginados, del más reciente al más antiguo."
+    },
+    {
+     "id": "RF-M03-06",
+     "texto": "El sistema debe excluir de los resultados a los tutores no verificados, suspendidos o con perfil incompleto.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Ningún tutor en estado distinto de ACTIVO aparece en los resultados."
+    },
+    {
+     "id": "RF-M03-07",
+     "texto": "El sistema debe permitir al estudiante guardar tutores como favoritos.",
+     "actor": "Estudiante",
+     "prioridad": "C",
+     "criterio": "El listado de favoritos es accesible desde el panel del estudiante."
+    },
+    {
+     "id": "RF-M03-08",
+     "texto": "El sistema debe sugerir tutores alternativos cuando una búsqueda no arroje resultados.",
+     "actor": "Sistema",
+     "prioridad": "C",
+     "criterio": "La sugerencia se basa en materias afines o en la relajación del filtro más restrictivo."
+    }
+   ]
+  },
+  {
+   "id": "M04",
+   "nombre": "Gestión de disponibilidad",
+   "requerimientos": [
+    {
+     "id": "RF-M04-01",
+     "texto": "El sistema debe permitir al tutor definir su disponibilidad semanal mediante bloques horarios recurrentes.",
+     "actor": "Tutor",
+     "prioridad": "M",
+     "criterio": "Los bloques se expresan en la zona horaria del tutor y se muestran al estudiante en la suya."
+    },
+    {
+     "id": "RF-M04-02",
+     "texto": "El sistema debe permitir al tutor registrar excepciones puntuales: días no disponibles, vacaciones o bloques adicionales.",
+     "actor": "Tutor",
+     "prioridad": "M",
+     "criterio": "La excepción prevalece sobre la regla recurrente para la fecha afectada."
+    },
+    {
+     "id": "RF-M04-03",
+     "texto": "El sistema debe impedir el registro de bloques de disponibilidad que se solapen entre sí.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Al detectar solapamiento, el sistema rechaza el bloque e indica cuál lo genera."
+    },
+    {
+     "id": "RF-M04-04",
+     "texto": "El sistema debe marcar automáticamente como ocupado el bloque horario asociado a una reserva confirmada.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El bloque deja de ofrecerse a otros estudiantes de forma inmediata."
+    },
+    {
+     "id": "RF-M04-05",
+     "texto": "El sistema debe permitir al tutor activar o desactivar el modo disponibilidad inmediata para recibir solicitudes bajo demanda.",
+     "actor": "Tutor",
+     "prioridad": "M",
+     "criterio": "Activado el modo, el tutor pasa a estado EN_LINEA y es candidato para P-06."
+    },
+    {
+     "id": "RF-M04-06",
+     "texto": "El sistema debe desactivar automáticamente el modo de disponibilidad inmediata tras un periodo de inactividad o pérdida de conexión.",
+     "actor": "Sistema",
+     "prioridad": "S",
+     "criterio": "Transcurridos 15 minutos sin actividad, el tutor pasa a DESCONECTADO y se le notifica."
+    },
+    {
+     "id": "RF-M04-07",
+     "texto": "El sistema debe permitir al tutor definir una antelación mínima para aceptar reservas programadas.",
+     "actor": "Tutor",
+     "prioridad": "S",
+     "criterio": "Las franjas que incumplan la antelación mínima no se ofrecen al estudiante."
+    },
+    {
+     "id": "RF-M04-08",
+     "texto": "El sistema debe impedir liberar un bloque horario que ya tenga una reserva confirmada sin ejecutar previamente la cancelación de la sesión.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El intento de liberación devuelve un mensaje que enlaza al proceso de cancelación."
+    }
+   ]
+  },
+  {
+   "id": "M05",
+   "nombre": "Reserva de tutoría programada",
+   "requerimientos": [
+    {
+     "id": "RF-M05-01",
+     "texto": "El sistema debe mostrar al estudiante el calendario de franjas disponibles del tutor seleccionado.",
+     "actor": "Estudiante",
+     "prioridad": "M",
+     "criterio": "Solo se muestran franjas libres, futuras y que cumplan la antelación mínima del tutor."
+    },
+    {
+     "id": "RF-M05-02",
+     "texto": "El sistema debe permitir al estudiante solicitar una sesión indicando fecha, hora, duración, materia, modalidad y tema a tratar.",
+     "actor": "Estudiante",
+     "prioridad": "M",
+     "criterio": "El tema es un campo obligatorio de al menos 20 caracteres."
+    },
+    {
+     "id": "RF-M05-03",
+     "texto": "El sistema debe calcular y mostrar el costo total de la sesión antes de confirmar la solicitud.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El desglose muestra tarifa, duración, comisión de la plataforma e impuestos aplicables."
+    },
+    {
+     "id": "RF-M05-04",
+     "texto": "El sistema debe retener el pago del estudiante al confirmarse la reserva y liberarlo al tutor solo tras finalizar la sesión.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El monto queda en estado RETENIDO y es visible para ambas partes."
+    },
+    {
+     "id": "RF-M05-05",
+     "texto": "El sistema debe notificar al tutor la solicitud recibida y permitirle aceptarla o rechazarla dentro de un plazo definido.",
+     "actor": "Sistema / Tutor",
+     "prioridad": "M",
+     "criterio": "Vencido el plazo de 12 horas sin respuesta, la solicitud se cancela y se reembolsa al estudiante."
+    },
+    {
+     "id": "RF-M05-06",
+     "texto": "El sistema debe permitir al estudiante o al tutor cancelar una sesión confirmada, aplicando la política de cancelación vigente.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "M",
+     "criterio": "La cancelación con más de 24 horas de antelación reembolsa el 100%; con menos, aplica la penalización definida en RN-06."
+    },
+    {
+     "id": "RF-M05-07",
+     "texto": "El sistema debe permitir reprogramar una sesión confirmada, previo acuerdo de ambas partes.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "S",
+     "criterio": "La reprogramación exige aceptación explícita de la contraparte antes de aplicarse."
+    },
+    {
+     "id": "RF-M05-08",
+     "texto": "El sistema debe impedir que un estudiante reserve dos sesiones que se solapen en el tiempo.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El intento de reserva solapada se rechaza indicando la sesión en conflicto."
+    }
+   ]
+  },
+  {
+   "id": "M06",
+   "nombre": "Tutoría bajo demanda",
+   "requerimientos": [
+    {
+     "id": "RF-M06-01",
+     "texto": "El sistema debe permitir al estudiante crear una solicitud de tutoría inmediata indicando materia, tema, modalidad y duración estimada.",
+     "actor": "Estudiante",
+     "prioridad": "M",
+     "criterio": "La solicitud se crea en estado BUSCANDO_TUTOR con un temporizador visible."
+    },
+    {
+     "id": "RF-M06-02",
+     "texto": "El sistema debe identificar el conjunto de tutores candidatos: en estado EN_LINEA, verificados, con la materia solicitada en su perfil y con la modalidad requerida habilitada.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Ningún tutor que incumpla alguna de las cuatro condiciones recibe la solicitud."
+    },
+    {
+     "id": "RF-M06-03",
+     "texto": "El sistema debe difundir la solicitud a los tutores candidatos por orden de prioridad, ponderando reputación, cercanía y tasa de aceptación histórica.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El orden de difusión es reproducible y queda registrado para auditoría."
+    },
+    {
+     "id": "RF-M06-04",
+     "texto": "El sistema debe asignar la tutoría al primer tutor que acepte la solicitud y retirarla inmediatamente del resto.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Aceptada la solicitud, los demás candidatos ven la notificación marcada como \"ya asignada\" en menos de 3 segundos."
+    },
+    {
+     "id": "RF-M06-05",
+     "texto": "El sistema debe imponer un tiempo límite de respuesta a cada tutor notificado.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Transcurridos 45 segundos sin respuesta, la solicitud pasa al siguiente candidato de la lista."
+    },
+    {
+     "id": "RF-M06-06",
+     "texto": "El sistema debe finalizar la búsqueda e informar al estudiante si no se consigue tutor dentro del tiempo máximo de espera.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Tras 5 minutos sin asignación, la solicitud pasa a SIN_TUTOR y se ofrecen alternativas programadas."
+    },
+    {
+     "id": "RF-M06-07",
+     "texto": "El sistema debe autorizar y retener el pago del estudiante antes de iniciar la difusión de la solicitud.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Si la autorización del medio de pago falla, la solicitud no se difunde."
+    },
+    {
+     "id": "RF-M06-08",
+     "texto": "El sistema debe permitir al estudiante cancelar la solicitud mientras esté en estado BUSCANDO_TUTOR sin costo alguno.",
+     "actor": "Estudiante",
+     "prioridad": "M",
+     "criterio": "La cancelación libera la retención del pago en su totalidad."
+    },
+    {
+     "id": "RF-M06-09",
+     "texto": "El sistema debe mostrar al estudiante la ubicación aproximada de los tutores candidatos cuando la modalidad solicitada sea presencial.",
+     "actor": "Sistema",
+     "prioridad": "S",
+     "criterio": "La ubicación se muestra con precisión de zona, nunca con dirección exacta, hasta que la sesión sea confirmada."
+    }
+   ]
+  },
+  {
+   "id": "M07",
+   "nombre": "Ejecución de la sesión de tutoría",
+   "requerimientos": [
+    {
+     "id": "RF-M07-01",
+     "texto": "El sistema debe generar automáticamente un enlace de videoconferencia único para toda sesión virtual confirmada.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El enlace se habilita 10 minutos antes de la hora pactada y se envía a ambas partes."
+    },
+    {
+     "id": "RF-M07-02",
+     "texto": "El sistema debe registrar la hora real de inicio y de finalización de la sesión.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "La duración efectiva se calcula a partir de estas marcas y sustenta la liquidación."
+    },
+    {
+     "id": "RF-M07-03",
+     "texto": "El sistema debe proveer un canal de mensajería interna entre estudiante y tutor asociado a la sesión.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "S",
+     "criterio": "El chat queda disponible desde la confirmación y hasta 7 días después de finalizada la sesión."
+    },
+    {
+     "id": "RF-M07-04",
+     "texto": "El sistema debe permitir a ambas partes marcar la sesión como finalizada.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "M",
+     "criterio": "Confirmada por cualquiera de las dos partes, se dispara el proceso de calificación (P-08)."
+    },
+    {
+     "id": "RF-M07-05",
+     "texto": "El sistema debe registrar la inasistencia de cualquiera de las partes transcurrido un margen de tolerancia.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Pasados 15 minutos sin conexión de una parte, la otra puede reportar la inasistencia."
+    },
+    {
+     "id": "RF-M07-06",
+     "texto": "El sistema debe permitir adjuntar material de apoyo a la sesión: archivos, enlaces o notas.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "C",
+     "criterio": "Los adjuntos quedan asociados al historial de la sesión y son accesibles para ambas partes."
+    },
+    {
+     "id": "RF-M07-07",
+     "texto": "El sistema debe coordinar el punto de encuentro en las sesiones presenciales mostrando la ubicación acordada a ambas partes.",
+     "actor": "Sistema",
+     "prioridad": "S",
+     "criterio": "La dirección exacta solo se revela una vez la sesión está confirmada y pagada."
+    }
+   ]
+  },
+  {
+   "id": "M08",
+   "nombre": "Calificación y reputación",
+   "requerimientos": [
+    {
+     "id": "RF-M08-01",
+     "texto": "El sistema debe solicitar al estudiante una calificación de 1 a 5 estrellas y un comentario opcional al finalizar cada sesión.",
+     "actor": "Estudiante",
+     "prioridad": "M",
+     "criterio": "La solicitud se muestra inmediatamente al cerrar la sesión y se recuerda a las 24 horas si no se responde."
+    },
+    {
+     "id": "RF-M08-02",
+     "texto": "El sistema debe permitir al tutor calificar al estudiante en puntualidad y actitud.",
+     "actor": "Tutor",
+     "prioridad": "S",
+     "criterio": "La calificación del estudiante es visible únicamente para tutores y administradores."
+    },
+    {
+     "id": "RF-M08-03",
+     "texto": "El sistema debe publicar la calificación de ambas partes de forma simultánea, o al vencer el plazo de 7 días.",
+     "actor": "Sistema",
+     "prioridad": "S",
+     "criterio": "Ninguna parte puede ver la calificación recibida antes de emitir la suya, evitando el sesgo de reciprocidad."
+    },
+    {
+     "id": "RF-M08-04",
+     "texto": "El sistema debe recalcular la calificación promedio del tutor tras cada nueva valoración publicada.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El promedio se muestra con un decimal e indica el número de valoraciones que lo sustentan."
+    },
+    {
+     "id": "RF-M08-05",
+     "texto": "El sistema debe impedir calificar una sesión que no haya sido efectivamente realizada.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Las sesiones canceladas o sin asistencia no habilitan el formulario de calificación."
+    },
+    {
+     "id": "RF-M08-06",
+     "texto": "El sistema debe permitir al tutor responder públicamente a un comentario recibido, una única vez.",
+     "actor": "Tutor",
+     "prioridad": "C",
+     "criterio": "La respuesta se muestra anidada bajo el comentario original."
+    },
+    {
+     "id": "RF-M08-07",
+     "texto": "El sistema debe permitir reportar una calificación o comentario por contenido inapropiado.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "M",
+     "criterio": "El reporte crea un caso de moderación en P-11 y oculta el comentario hasta su revisión."
+    },
+    {
+     "id": "RF-M08-08",
+     "texto": "El sistema debe suspender automáticamente la visibilidad del tutor cuando su calificación promedio caiga por debajo del umbral definido.",
+     "actor": "Sistema",
+     "prioridad": "S",
+     "criterio": "Con promedio inferior a 3,0 sobre un mínimo de 10 valoraciones, se genera una alerta al administrador."
+    }
+   ]
+  },
+  {
+   "id": "M09",
+   "nombre": "Pagos, comisiones y liquidación",
+   "requerimientos": [
+    {
+     "id": "RF-M09-01",
+     "texto": "El sistema debe permitir al estudiante registrar y gestionar sus medios de pago.",
+     "actor": "Estudiante",
+     "prioridad": "M",
+     "criterio": "Los datos sensibles del medio de pago se tokenizan en la pasarela; la plataforma nunca los almacena."
+    },
+    {
+     "id": "RF-M09-02",
+     "texto": "El sistema debe autorizar y retener el importe de la sesión al confirmarse la reserva o la asignación bajo demanda.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El importe retenido no se transfiere al tutor hasta que la sesión finalice."
+    },
+    {
+     "id": "RF-M09-03",
+     "texto": "El sistema debe calcular la comisión de la plataforma sobre cada sesión según el porcentaje vigente.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "La comisión aparece desglosada tanto en el recibo del estudiante como en la liquidación del tutor."
+    },
+    {
+     "id": "RF-M09-04",
+     "texto": "El sistema debe liberar el pago al tutor una vez finalizada la sesión y transcurrido el periodo de garantía.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El periodo de garantía es de 48 horas; una disputa abierta lo suspende hasta su resolución."
+    },
+    {
+     "id": "RF-M09-05",
+     "texto": "El sistema debe permitir al tutor registrar su cuenta bancaria y consultar el estado de sus liquidaciones.",
+     "actor": "Tutor",
+     "prioridad": "M",
+     "criterio": "El panel muestra saldo disponible, saldo retenido y el historial de dispersiones."
+    },
+    {
+     "id": "RF-M09-06",
+     "texto": "El sistema debe procesar reembolsos totales o parciales según la política de cancelación aplicable.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El reembolso se refleja en el medio de pago original en un plazo máximo de 10 días hábiles."
+    },
+    {
+     "id": "RF-M09-07",
+     "texto": "El sistema debe generar un comprobante electrónico por cada transacción realizada.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El comprobante es descargable en PDF desde el historial de ambas partes."
+    },
+    {
+     "id": "RF-M09-08",
+     "texto": "El sistema debe conciliar diariamente las transacciones registradas contra los reportes de la pasarela de pagos.",
+     "actor": "Sistema",
+     "prioridad": "S",
+     "criterio": "Toda diferencia detectada genera una alerta al administrador con el detalle de las transacciones descuadradas."
+    }
+   ]
+  },
+  {
+   "id": "M10",
+   "nombre": "Notificaciones",
+   "requerimientos": [
+    {
+     "id": "RF-M10-01",
+     "texto": "El sistema debe notificar a través de múltiples canales: notificación en aplicación, push, correo electrónico y SMS.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "El canal se selecciona según la criticidad del evento y las preferencias del usuario."
+    },
+    {
+     "id": "RF-M10-02",
+     "texto": "El sistema debe notificar al tutor toda nueva solicitud de reserva programada.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "La notificación se entrega en menos de 60 segundos desde la creación de la solicitud."
+    },
+    {
+     "id": "RF-M10-03",
+     "texto": "El sistema debe notificar en tiempo real a los tutores candidatos de una solicitud bajo demanda.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "La notificación push se entrega en menos de 5 segundos e incluye el temporizador de respuesta."
+    },
+    {
+     "id": "RF-M10-04",
+     "texto": "El sistema debe enviar recordatorios de sesión próxima a ambas partes.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Se envían dos recordatorios: 24 horas y 15 minutos antes de la sesión."
+    },
+    {
+     "id": "RF-M10-05",
+     "texto": "El sistema debe notificar los cambios de estado relevantes: aceptación, rechazo, cancelación, reprogramación, pago liberado y resolución de disputa.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Cada cambio de estado tiene una plantilla de notificación asociada."
+    },
+    {
+     "id": "RF-M10-06",
+     "texto": "El sistema debe permitir al usuario configurar qué notificaciones desea recibir y por qué canal.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "S",
+     "criterio": "Las notificaciones críticas de seguridad y pago no son desactivables."
+    },
+    {
+     "id": "RF-M10-07",
+     "texto": "El sistema debe reintentar el envío de una notificación fallida y registrar el resultado.",
+     "actor": "Sistema",
+     "prioridad": "S",
+     "criterio": "Se realizan hasta 3 reintentos con espera creciente; agotados, se registra el fallo y se conserva la notificación en la bandeja de la aplicación."
+    },
+    {
+     "id": "RF-M10-08",
+     "texto": "El sistema debe mantener un centro de notificaciones dentro de la aplicación con el histórico consultable.",
+     "actor": "Sistema",
+     "prioridad": "S",
+     "criterio": "El histórico conserva las notificaciones de los últimos 90 días."
+    }
+   ]
+  },
+  {
+   "id": "M11",
+   "nombre": "Administración, moderación y conflictos",
+   "requerimientos": [
+    {
+     "id": "RF-M11-01",
+     "texto": "El sistema debe proveer un panel administrativo con la cola de perfiles de tutor pendientes de verificación.",
+     "actor": "Administrador",
+     "prioridad": "M",
+     "criterio": "La cola se ordena por antigüedad de la solicitud y muestra el tiempo de espera de cada caso."
+    },
+    {
+     "id": "RF-M11-02",
+     "texto": "El sistema debe permitir al administrador suspender, reactivar o eliminar cuentas de usuario, dejando registro del motivo.",
+     "actor": "Administrador",
+     "prioridad": "M",
+     "criterio": "Toda acción queda en la bitácora de auditoría con usuario, fecha, hora y motivo."
+    },
+    {
+     "id": "RF-M11-03",
+     "texto": "El sistema debe permitir a cualquier usuario abrir una disputa sobre una sesión realizada.",
+     "actor": "Estudiante / Tutor",
+     "prioridad": "M",
+     "criterio": "La disputa solo puede abrirse dentro de las 48 horas siguientes a la finalización de la sesión."
+    },
+    {
+     "id": "RF-M11-04",
+     "texto": "El sistema debe permitir al administrador revisar la evidencia de una disputa y resolverla a favor de una de las partes o de forma parcial.",
+     "actor": "Administrador",
+     "prioridad": "M",
+     "criterio": "La resolución dispara automáticamente el ajuste de pago correspondiente en M09."
+    },
+    {
+     "id": "RF-M11-05",
+     "texto": "El sistema debe permitir al administrador moderar comentarios reportados: aprobarlos, ocultarlos o eliminarlos.",
+     "actor": "Administrador",
+     "prioridad": "M",
+     "criterio": "El autor del comentario es notificado de la decisión y de su motivo."
+    },
+    {
+     "id": "RF-M11-06",
+     "texto": "El sistema debe permitir al administrador gestionar el catálogo de materias, niveles educativos y rangos de precio.",
+     "actor": "Administrador",
+     "prioridad": "S",
+     "criterio": "Los cambios en el catálogo no afectan retroactivamente las sesiones ya realizadas."
+    },
+    {
+     "id": "RF-M11-07",
+     "texto": "El sistema debe permitir al administrador configurar los parámetros del negocio: porcentaje de comisión, política de cancelación, tiempos límite y umbrales de reputación.",
+     "actor": "Administrador",
+     "prioridad": "M",
+     "criterio": "Todo cambio de parámetro queda versionado con fecha de entrada en vigencia."
+    },
+    {
+     "id": "RF-M11-08",
+     "texto": "El sistema debe mantener una bitácora de auditoría inalterable de las acciones administrativas.",
+     "actor": "Sistema",
+     "prioridad": "M",
+     "criterio": "Los registros de auditoría no pueden ser editados ni eliminados por ningún rol."
+    }
+   ]
+  },
+  {
+   "id": "M12",
+   "nombre": "Reportes e indicadores",
+   "requerimientos": [
+    {
+     "id": "RF-M12-01",
+     "texto": "El sistema debe presentar un tablero con los indicadores clave de la plataforma.",
+     "actor": "Administrador",
+     "prioridad": "M",
+     "criterio": "Incluye como mínimo: tutorías realizadas, ingresos, comisión generada, usuarios activos y tasa de conversión de solicitudes."
+    },
+    {
+     "id": "RF-M12-02",
+     "texto": "El sistema debe reportar las materias más solicitadas y las de mayor demanda insatisfecha.",
+     "actor": "Administrador",
+     "prioridad": "S",
+     "criterio": "La demanda insatisfecha se calcula sobre las solicitudes que terminaron en estado SIN_TUTOR."
+    },
+    {
+     "id": "RF-M12-03",
+     "texto": "El sistema debe reportar la tasa de aceptación y el tiempo medio de respuesta de los tutores en el modelo bajo demanda.",
+     "actor": "Administrador",
+     "prioridad": "S",
+     "criterio": "El reporte es filtrable por materia, franja horaria y periodo."
+    },
+    {
+     "id": "RF-M12-04",
+     "texto": "El sistema debe permitir exportar cualquier reporte a formato CSV y PDF.",
+     "actor": "Administrador",
+     "prioridad": "C",
+     "criterio": "La exportación conserva los filtros aplicados en pantalla."
+    },
+    {
+     "id": "RF-M12-05",
+     "texto": "El sistema debe ofrecer al tutor un panel con sus propias métricas: ingresos, sesiones, calificación y ocupación.",
+     "actor": "Tutor",
+     "prioridad": "S",
+     "criterio": "El panel permite comparar el periodo actual contra el anterior."
+    },
+    {
+     "id": "RF-M12-06",
+     "texto": "El sistema debe ofrecer al estudiante su historial de tutorías con acceso a comprobantes y material adjunto.",
+     "actor": "Estudiante",
+     "prioridad": "M",
+     "criterio": "El historial es filtrable por materia, tutor y rango de fechas."
+    }
+   ]
+  }
+ ],
+ "reglas": [
+  {
+   "id": "RN-01",
+   "texto": "Un tutor solo puede aparecer en resultados de búsqueda si su perfil está verificado y en estado ACTIVO.",
+   "trazabilidad": "RF-M03-06, RF-M02-06"
+  },
+  {
+   "id": "RN-02",
+   "texto": "El pago del estudiante se retiene al confirmar y se libera al tutor 48 horas después de finalizada la sesión, salvo disputa abierta.",
+   "trazabilidad": "RF-M05-04, RF-M09-02, RF-M09-04"
+  },
+  {
+   "id": "RN-03",
+   "texto": "La comisión de la plataforma es del 15% sobre el valor de la sesión y se descuenta de la liquidación del tutor.",
+   "trazabilidad": "RF-M09-03"
+  },
+  {
+   "id": "RN-04",
+   "texto": "En el modelo bajo demanda, la sesión se asigna al primer tutor que acepta; no existe adjudicación por subasta ni por precio.",
+   "trazabilidad": "RF-M06-04"
+  },
+  {
+   "id": "RN-05",
+   "texto": "Un tutor tiene 45 segundos para responder una solicitud bajo demanda y 12 horas para responder una reserva programada.",
+   "trazabilidad": "RF-M06-05, RF-M05-05"
+  },
+  {
+   "id": "RN-06",
+   "texto": "Cancelación con más de 24 horas de antelación: reembolso del 100%. Entre 24 y 2 horas: 50%. Con menos de 2 horas: sin reembolso.",
+   "trazabilidad": "RF-M05-06, RF-M09-06"
+  },
+  {
+   "id": "RN-07",
+   "texto": "Ningún usuario puede calificar una sesión que no se haya realizado efectivamente.",
+   "trazabilidad": "RF-M08-05"
+  },
+  {
+   "id": "RN-08",
+   "texto": "Las calificaciones mutuas se publican simultáneamente o al vencer el plazo de 7 días.",
+   "trazabilidad": "RF-M08-03"
+  },
+  {
+   "id": "RN-09",
+   "texto": "Una disputa solo puede abrirse dentro de las 48 horas siguientes a la finalización de la sesión.",
+   "trazabilidad": "RF-M11-03"
+  },
+  {
+   "id": "RN-10",
+   "texto": "Un usuario con rol dual no puede reservarse tutoría a sí mismo.",
+   "trazabilidad": "RF-M01-06, RF-M05-08"
+  }
+ ],
+ "noFuncionales": [
+  {
+   "id": "RNF-01",
+   "categoria": "Eficiencia de desempeño",
+   "texto": "Las páginas de búsqueda y de perfil deben responder con rapidez bajo carga normal.",
+   "metrica": "Tiempo de respuesta ≤ 2 s en el percentil 95, con 500 usuarios concurrentes.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-02",
+   "categoria": "Eficiencia de desempeño",
+   "texto": "La difusión de una solicitud bajo demanda debe ser prácticamente instantánea.",
+   "metrica": "La notificación llega al primer tutor candidato en ≤ 5 s desde la creación de la solicitud.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-03",
+   "categoria": "Eficiencia de desempeño",
+   "texto": "La asignación de un tutor debe retirar la solicitud del resto de candidatos sin ambigüedad.",
+   "metrica": "Propagación del estado \"ya asignada\" en ≤ 3 s a todos los candidatos.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-04",
+   "categoria": "Eficiencia de desempeño",
+   "texto": "El sistema debe soportar la carga proyectada del primer año de operación.",
+   "metrica": "5.000 usuarios registrados, 300 sesiones concurrentes y 50 solicitudes bajo demanda por minuto en hora pico.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-05",
+   "categoria": "Eficiencia de desempeño",
+   "texto": "El consumo de datos de la aplicación móvil debe ser moderado.",
+   "metrica": "≤ 5 MB por sesión de navegación de 10 minutos, sin contar la videoconferencia.",
+   "prioridad": "C"
+  },
+  {
+   "id": "RNF-06",
+   "categoria": "Fiabilidad",
+   "texto": "La plataforma debe mantener alta disponibilidad.",
+   "metrica": "Disponibilidad mensual ≥ 99,5%, excluyendo ventanas de mantenimiento anunciadas con 72 horas de antelación.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-07",
+   "categoria": "Fiabilidad",
+   "texto": "Ninguna transacción de pago puede perderse ni duplicarse ante fallos.",
+   "metrica": "Toda operación de pago es idempotente y se concilia diariamente con la pasarela; 0 transacciones descuadradas sin alerta.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-08",
+   "categoria": "Fiabilidad",
+   "texto": "El sistema debe degradarse de forma controlada ante la caída de un servicio externo.",
+   "metrica": "Caída de la videoconferencia o los mapas: el resto de funciones sigue operando y se informa al usuario del servicio afectado.",
+   "prioridad": "S"
+  },
+  {
+   "id": "RNF-09",
+   "categoria": "Fiabilidad",
+   "texto": "Debe existir respaldo y capacidad de recuperación de la información.",
+   "metrica": "Respaldo diario, RPO ≤ 24 h y RTO ≤ 4 h, verificados con una prueba de restauración trimestral.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-10",
+   "categoria": "Seguridad",
+   "texto": "Toda comunicación debe viajar cifrada.",
+   "metrica": "HTTPS/TLS 1.3 obligatorio; toda petición en texto plano se redirige o rechaza.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-11",
+   "categoria": "Seguridad",
+   "texto": "Las contraseñas deben almacenarse de forma irreversible.",
+   "metrica": "Algoritmo de derivación con sal por usuario (bcrypt o Argon2); ninguna contraseña recuperable en texto claro.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-12",
+   "categoria": "Seguridad",
+   "texto": "La plataforma no debe almacenar datos sensibles de medios de pago.",
+   "metrica": "Los datos de tarjeta se tokenizan en la pasarela certificada PCI-DSS; auditoría de base de datos sin números de tarjeta.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-13",
+   "categoria": "Seguridad",
+   "texto": "El acceso a cada funcionalidad debe estar controlado por rol.",
+   "metrica": "Control de acceso basado en roles verificado también del lado del servidor; 0 endpoints accesibles sin autorización en la prueba de penetración.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-14",
+   "categoria": "Seguridad",
+   "texto": "El sistema debe cumplir la normativa colombiana de protección de datos personales.",
+   "metrica": "Cumplimiento de la Ley 1581 de 2012 y el Decreto 1377 de 2013: consentimiento informado, finalidad declarada y canal de ejercicio de derechos del titular.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-15",
+   "categoria": "Seguridad",
+   "texto": "La información de contacto y la ubicación exacta deben protegerse hasta que exista una sesión confirmada.",
+   "metrica": "Antes de la confirmación solo se expone la zona aproximada; nunca dirección ni teléfono.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-16",
+   "categoria": "Seguridad",
+   "texto": "El sistema debe registrar en bitácora los eventos críticos de seguridad.",
+   "metrica": "Se registran inicios de sesión, cambios de contraseña, cambios de rol y acciones administrativas, con retención mínima de 12 meses.",
+   "prioridad": "S"
+  },
+  {
+   "id": "RNF-17",
+   "categoria": "Usabilidad",
+   "texto": "Un estudiante nuevo debe poder completar su primera reserva sin ayuda externa.",
+   "metrica": "≥ 80% de los usuarios de una prueba con 10 participantes completa la reserva en menos de 5 minutos.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-18",
+   "categoria": "Usabilidad",
+   "texto": "La interfaz debe ser responsiva y operable desde dispositivos móviles.",
+   "metrica": "Funcionalidad completa en pantallas desde 360 px de ancho.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-19",
+   "categoria": "Usabilidad",
+   "texto": "La plataforma debe cumplir criterios de accesibilidad.",
+   "metrica": "Conformidad WCAG 2.1 nivel AA: contraste, navegación por teclado y etiquetas para lectores de pantalla.",
+   "prioridad": "S"
+  },
+  {
+   "id": "RNF-20",
+   "categoria": "Usabilidad",
+   "texto": "La interfaz debe estar disponible en español, con arquitectura preparada para otros idiomas.",
+   "metrica": "Todos los textos de interfaz externalizados en archivos de traducción; ninguno embebido en código.",
+   "prioridad": "S"
+  },
+  {
+   "id": "RNF-21",
+   "categoria": "Usabilidad",
+   "texto": "Los mensajes de error deben ser comprensibles y accionables.",
+   "metrica": "Todo error visible al usuario indica qué ocurrió y qué puede hacer; ningún código técnico expuesto.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-22",
+   "categoria": "Mantenibilidad",
+   "texto": "El sistema debe construirse con una arquitectura modular.",
+   "metrica": "Los módulos M01 a M12 son desplegables y probables de forma independiente.",
+   "prioridad": "S"
+  },
+  {
+   "id": "RNF-23",
+   "categoria": "Mantenibilidad",
+   "texto": "El código debe contar con cobertura de pruebas automatizadas.",
+   "metrica": "Cobertura ≥ 70% en la lógica de negocio; 100% en cálculo de precios, comisiones y reembolsos.",
+   "prioridad": "S"
+  },
+  {
+   "id": "RNF-24",
+   "categoria": "Mantenibilidad",
+   "texto": "Los parámetros del negocio deben ser configurables sin desplegar código.",
+   "metrica": "Comisión, tiempos límite, política de cancelación y umbrales se modifican desde el panel administrativo.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-25",
+   "categoria": "Mantenibilidad",
+   "texto": "Las integraciones externas deben estar aisladas tras una interfaz propia.",
+   "metrica": "Sustituir la pasarela de pagos o el proveedor de videoconferencia no exige tocar la lógica de negocio.",
+   "prioridad": "S"
+  },
+  {
+   "id": "RNF-26",
+   "categoria": "Portabilidad y compatibilidad",
+   "texto": "La plataforma debe operar en los navegadores de mayor uso.",
+   "metrica": "Chrome, Firefox, Edge y Safari, en sus dos versiones más recientes.",
+   "prioridad": "M"
+  },
+  {
+   "id": "RNF-27",
+   "categoria": "Portabilidad y compatibilidad",
+   "texto": "La aplicación móvil debe estar disponible para las dos plataformas principales.",
+   "metrica": "Android 10 o superior e iOS 15 o superior.",
+   "prioridad": "S"
+  },
+  {
+   "id": "RNF-28",
+   "categoria": "Portabilidad y compatibilidad",
+   "texto": "El despliegue debe ser independiente del proveedor de nube.",
+   "metrica": "Aplicación contenerizada, sin dependencias exclusivas de un único proveedor.",
+   "prioridad": "C"
+  },
+  {
+   "id": "RNF-29",
+   "categoria": "Escalabilidad",
+   "texto": "El sistema debe escalar horizontalmente ante crecimiento de la demanda.",
+   "metrica": "Duplicar la carga se atiende agregando instancias, sin rediseño de la aplicación.",
+   "prioridad": "S"
+  },
+  {
+   "id": "RNF-30",
+   "categoria": "Escalabilidad",
+   "texto": "El motor de asignación bajo demanda debe soportar picos de concurrencia.",
+   "metrica": "200 solicitudes simultáneas sin que ninguna se asigne dos veces ni quede sin procesar.",
+   "prioridad": "M"
+  }
+ ],
+ "mapa": "flowchart LR\n  P01[\"P-01<br/>Registro y<br/>autenticación\"]\n  P02[\"P-02<br/>Verificación<br/>de tutor\"]\n  P03[\"P-03<br/>Búsqueda<br/>de tutor\"]\n  P04[\"P-04<br/>Reserva<br/>programada\"]\n  P05[\"P-05<br/>Gestión de<br/>disponibilidad\"]\n  P06[\"P-06<br/>Tutoría bajo<br/>demanda\"]\n  P07[\"P-07<br/>Ejecución de<br/>la sesión\"]\n  P08[\"P-08<br/>Calificación<br/>y reputación\"]\n  P09[\"P-09<br/>Pagos y<br/>comisiones\"]\n  P10[\"P-10<br/>Notificaciones\"]\n  P11[\"P-11<br/>Moderación y<br/>conflictos\"]\n\n  P01 --> P02\n  P01 --> P03\n  P02 --> P05\n  P05 --> P03\n  P05 --> P06\n  P03 --> P04\n  P04 --> P07\n  P06 --> P07\n  P07 --> P08\n  P07 --> P09\n  P08 --> P11\n  P09 --> P11\n  P10 -.-> P04\n  P10 -.-> P06\n  P10 -.-> P07\n  P10 -.-> P09\n\n  classDef core fill:#e8eef7,stroke:#3b5f8a,stroke-width:1.5px,color:#1b2b3f;\n  classDef sup fill:#f3efe6,stroke:#a0895f,stroke-width:1.5px,color:#3f2f1b;\n  class P01,P03,P04,P05,P06,P07,P08,P10 core;\n  class P02,P09,P11 sup;",
+ "contexto": "flowchart LR\n  subgraph ACT[\"ACTORES\"]\n    direction TB\n    EST([\"ACT-01<br/><b>ESTUDIANTE</b>\"])\n    TUT([\"ACT-02<br/><b>TUTOR</b>\"])\n    ADM([\"ACT-03<br/><b>ADMINISTRADOR</b>\"])\n    VIS([\"ACT-04<br/><b>VISITANTE</b>\"])\n  end\n  SYS{{\"<b>SISTEMA</b><br/><b>TutoresOn-Line</b><br/>Plataforma de<br/>tutorías académicas\"}}\n  subgraph EXTS[\"ENTIDADES EXTERNAS\"]\n    direction TB\n    PAG[\"EXT-01<br/>Pasarela de pagos\"]\n    VID[\"EXT-02<br/>Videoconferencia\"]\n    MAP[\"EXT-03<br/>Mapas y geolocalización\"]\n    MSG[\"EXT-04<br/>Mensajería\"]\n    IDP[\"EXT-05<br/>Proveedor de identidad\"]\n    VER[\"EXT-06<br/>Verificación documental\"]\n  end\n  EST <-- \"F1 / F2\" --> SYS\n  TUT <-- \"F3 / F4\" --> SYS\n  ADM <-- \"F5 / F6\" --> SYS\n  VIS <-- \"F7 / F8\" --> SYS\n  SYS <-- \"F9 / F10\" --> PAG\n  SYS <-- \"F11 / F12\" --> VID\n  SYS <-- \"F13 / F14\" --> MAP\n  SYS <-- \"F15 / F16\" --> MSG\n  SYS <-- \"F17 / F18\" --> IDP\n  SYS <-- \"F19 / F20\" --> VER\n  classDef actor fill:#e8eef7,stroke:#3b5f8a,stroke-width:2px,color:#1b2b3f;\n  classDef sistema fill:#3b5f8a,stroke:#24405f,stroke-width:2px,color:#ffffff;\n  classDef externo fill:#f3efe6,stroke:#a0895f,stroke-width:2px,color:#3f2f1b;\n  class EST,TUT,ADM,VIS actor;\n  class SYS sistema;\n  class PAG,VID,MAP,MSG,IDP,VER externo;",
+ "procesos": [
+  {
+   "id": "P-01",
+   "nombre": "Registro y autenticación de usuario",
+   "objetivo": "Permitir que una persona cree una cuenta verificada en la plataforma y acceda a ella con el rol que le corresponde.",
+   "actor": "ACT-04 Visitante",
+   "participantes": "Sistema, EXT-04 Servicio de mensajería, EXT-05 Proveedor de identidad",
+   "disparador": "El visitante selecciona la opción \"Crear cuenta\" o \"Iniciar sesión\".",
+   "precondiciones": "El visitante dispone de una dirección de correo electrónico válida y no registrada previamente.",
+   "entradas": "Nombre completo, correo, contraseña, rol deseado, aceptación de términos.",
+   "salidas": "Cuenta creada en estado ACTIVA, sesión iniciada, rol asignado.",
+   "postcondiciones": "El usuario puede operar según su rol. Si eligió Tutor, queda encadenado el proceso P-02.",
+   "requerimientos": "RF-M01-01 a RF-M01-09",
+   "diagrama": "flowchart TB\n  subgraph L1[\"VISITANTE / USUARIO\"]\n    A1([\"Inicio · Diligencia el formulario de<br/>registro y acepta los términos\"])\n    A6[\"Abre el correo y pulsa<br/>el enlace de activación\"]\n    A8[\"Selecciona su rol:<br/>Estudiante / Tutor / Ambos\"]\n  end\n  subgraph L2[\"SISTEMA TutoresOn-Line\"]\n    B1{\"¿Correo ya<br/>registrado?\"}\n    B3[\"Valida los datos, crea la cuenta<br/>PENDIENTE_VERIFICACION y genera<br/>el token de activación (24 h)\"]\n    B7{\"¿Token válido<br/>y vigente?\"}\n    B9[\"Activa la cuenta, crea la<br/>sesión y aplica el rol\"]\n    B10{\"¿Rol<br/>Tutor?\"}\n    P02[\"Encadena P-02<br/>Verificación de tutor\"]\n    F([\"Fin · Usuario operando<br/>en la plataforma\"])\n  end\n  subgraph L3[\"SERVICIOS EXTERNOS\"]\n    C1[\"EXT-04 · Envía el correo<br/>de confirmación\"]\n  end\n  A1 --> B1\n  B1 -- No --> B3\n  B3 --> C1\n  C1 --> A6\n  A6 --> B7\n  B7 -- Sí --> A8\n  A8 --> B9\n  B9 --> B10\n  B10 -- Sí --> P02\n  B10 -- No --> F\n  P02 --> F\n  classDef lane1 fill:#e8eef7,stroke:#3b5f8a,color:#1b2b3f;\n  classDef lane2 fill:#eef3ec,stroke:#5f8a4a,color:#1f3f1b;\n  classDef lane3 fill:#f3efe6,stroke:#a0895f,color:#3f2f1b;\n  class A1,A6,A8 lane1;\n  class B3,B9,P02,F lane2;\n  class C1 lane3;",
+   "flujo": [
+    {
+     "n": 1,
+     "actor": "Visitante",
+     "accion": "Ingresa a la plataforma y selecciona \"Crear cuenta\"."
+    },
+    {
+     "n": 2,
+     "actor": "Visitante",
+     "accion": "Diligencia nombre completo, correo electrónico y contraseña."
+    },
+    {
+     "n": 3,
+     "actor": "Visitante",
+     "accion": "Acepta los términos y condiciones y la política de tratamiento de datos."
+    },
+    {
+     "n": 4,
+     "actor": "Sistema",
+     "accion": "Verifica que el correo no esté registrado previamente."
+    },
+    {
+     "n": 5,
+     "actor": "Sistema",
+     "accion": "Valida el formato de los datos y la fortaleza de la contraseña."
+    },
+    {
+     "n": 6,
+     "actor": "Sistema",
+     "accion": "Crea la cuenta en estado PENDIENTE_VERIFICACION y genera un token de activación con vigencia de 24 horas."
+    },
+    {
+     "n": 7,
+     "actor": "Sistema → EXT-04",
+     "accion": "Solicita el envío del correo de confirmación con el enlace de activación."
+    },
+    {
+     "n": 8,
+     "actor": "Visitante",
+     "accion": "Abre el correo y pulsa el enlace de activación."
+    },
+    {
+     "n": 9,
+     "actor": "Sistema",
+     "accion": "Valida el token, activa la cuenta y cambia su estado a ACTIVA."
+    },
+    {
+     "n": 10,
+     "actor": "Usuario",
+     "accion": "Selecciona su rol: Estudiante, Tutor o ambos."
+    },
+    {
+     "n": 11,
+     "actor": "Sistema",
+     "accion": "Crea la sesión, aplica el rol y redirige al panel correspondiente."
+    },
+    {
+     "n": 12,
+     "actor": "Sistema",
+     "accion": "Si el rol elegido incluye Tutor, encadena el proceso P-02."
+    }
+   ],
+   "alternativos": [
+    {
+     "id": "A1",
+     "condicion": "El visitante elige registrarse con un proveedor de identidad externo.",
+     "camino": "El sistema redirige a EXT-05, recibe el token de identidad, crea la cuenta con el correo ya verificado y salta directamente al paso 10. No se solicita contraseña."
+    },
+    {
+     "id": "A2",
+     "condicion": "El usuario ya tiene cuenta e ingresa por \"Iniciar sesión\".",
+     "camino": "El sistema valida credenciales, crea la sesión y continúa desde el paso 11."
+    },
+    {
+     "id": "A3",
+     "condicion": "El usuario olvidó su contraseña.",
+     "camino": "Solicita recuperación, el sistema envía un enlace de un solo uso vigente 60 minutos, el usuario define una contraseña nueva y el flujo continúa desde el paso 11."
+    },
+    {
+     "id": "A4",
+     "condicion": "El correo de confirmación no llega o se extravía.",
+     "camino": "El usuario solicita el reenvío; el sistema invalida el token anterior, genera uno nuevo y repite el paso 7."
+    },
+    {
+     "id": "A5",
+     "condicion": "El usuario elige el rol dual (Estudiante y Tutor).",
+     "camino": "El sistema habilita ambas vistas sobre la misma cuenta y encadena P-02 sin bloquear el acceso a las funciones de estudiante."
+    }
+   ],
+   "excepciones": [
+    {
+     "id": "E1",
+     "excepcion": "El correo ya está registrado.",
+     "tratamiento": "El sistema no crea la cuenta e informa que el correo está en uso, ofreciendo iniciar sesión o recuperar la contraseña. Nunca revela si la cuenta existe con más detalle, por seguridad."
+    },
+    {
+     "id": "E2",
+     "excepcion": "La contraseña no cumple la política de seguridad.",
+     "tratamiento": "Se rechaza el formulario indicando los requisitos incumplidos, conservando el resto de los datos ya diligenciados."
+    },
+    {
+     "id": "E3",
+     "excepcion": "El token de activación está vencido o ya fue usado.",
+     "tratamiento": "El sistema muestra un mensaje explicativo y ofrece generar un nuevo enlace de activación. La cuenta permanece en PENDIENTE_VERIFICACION."
+    },
+    {
+     "id": "E4",
+     "excepcion": "El servicio de mensajería (EXT-04) no responde.",
+     "tratamiento": "El sistema encola el envío y reintenta hasta 3 veces con espera creciente. La cuenta queda creada; el usuario puede solicitar el reenvío manualmente."
+    },
+    {
+     "id": "E5",
+     "excepcion": "El proveedor de identidad externo (EXT-05) falla o el usuario deniega el permiso.",
+     "tratamiento": "El sistema informa el fallo y ofrece el registro tradicional con correo y contraseña como alternativa."
+    },
+    {
+     "id": "E6",
+     "excepcion": "Se detectan cinco intentos fallidos consecutivos de inicio de sesión.",
+     "tratamiento": "El sistema bloquea la cuenta durante 15 minutos y notifica al titular por correo el intento de acceso."
+    },
+    {
+     "id": "E7",
+     "excepcion": "El visitante no acepta los términos y condiciones.",
+     "tratamiento": "El registro no procede. El sistema explica que la aceptación es obligatoria para crear la cuenta."
+    }
+   ]
+  },
+  {
+   "id": "P-02",
+   "nombre": "Verificación de perfil de tutor",
+   "objetivo": "Validar la identidad y las credenciales académicas de un tutor antes de permitir que su perfil sea visible y contratable.",
+   "actor": "ACT-02 Tutor",
+   "participantes": "Sistema, ACT-03 Administrador, EXT-06 Verificación documental, EXT-04 Mensajería",
+   "disparador": "El tutor envía su perfil profesional a revisión.",
+   "precondiciones": "El tutor tiene cuenta activa con rol Tutor (P-01 completado).",
+   "entradas": "Perfil profesional, materias, documentos de identidad y títulos, precios, modalidades.",
+   "salidas": "Perfil en estado ACTIVO y visible, o en estado RECHAZADO con motivo.",
+   "postcondiciones": "Solo los perfiles aprobados aparecen en los resultados de búsqueda (RN-01).",
+   "requerimientos": "RF-M02-01 a RF-M02-08, RF-M11-01",
+   "diagrama": "flowchart TB\n  subgraph L1[\"TUTOR\"]\n    A1([\"Inicio · Completa el perfil<br/>y carga documentos\"])\n    A5[\"Corrige la información<br/>observada\"]\n  end\n  subgraph L2[\"SISTEMA TutoresOn-Line\"]\n    B1{\"¿Perfil<br/>completo?\"}\n    B2[\"Encola el perfil en<br/>estado EN_REVISION\"]\n    B6[\"Publica el perfil ACTIVO<br/>con distintivo verificado\"]\n    B7[\"Registra el rechazo<br/>y notifica el motivo\"]\n    F([\"Fin\"])\n  end\n  subgraph L3[\"ADMINISTRADOR / EXTERNOS\"]\n    C1[\"EXT-06 · Valida<br/>identidad y títulos\"]\n    C2[\"Revisa el perfil y el<br/>resultado de la validación\"]\n    C3{\"Decisión de<br/>verificación\"}\n  end\n  A1 --> B1\n  B1 -- Sí --> B2\n  B2 --> C1\n  C1 --> C2\n  C2 --> C3\n  C3 -- Aprueba --> B6\n  C3 -- Rechaza --> B7\n  C3 -- Corregir --> A5\n  A5 --> B1\n  B6 --> F\n  B7 --> F\n  classDef lane1 fill:#e8eef7,stroke:#3b5f8a,color:#1b2b3f;\n  classDef lane2 fill:#eef3ec,stroke:#5f8a4a,color:#1f3f1b;\n  classDef lane3 fill:#f3efe6,stroke:#a0895f,color:#3f2f1b;\n  class A1,A5 lane1;\n  class B2,B6,B7,F lane2;\n  class C1,C2 lane3;",
+   "flujo": [
+    {
+     "n": 1,
+     "actor": "Tutor",
+     "accion": "Completa su perfil profesional: formación, experiencia, descripción y foto."
+    },
+    {
+     "n": 2,
+     "actor": "Tutor",
+     "accion": "Asocia las materias que domina y el nivel educativo de cada una."
+    },
+    {
+     "n": 3,
+     "actor": "Tutor",
+     "accion": "Carga los documentos de soporte: documento de identidad, títulos y certificaciones."
+    },
+    {
+     "n": 4,
+     "actor": "Tutor",
+     "accion": "Define precio por hora, modalidades de trabajo y zona de cobertura si aplica."
+    },
+    {
+     "n": 5,
+     "actor": "Tutor",
+     "accion": "Envía el perfil a revisión."
+    },
+    {
+     "n": 6,
+     "actor": "Sistema",
+     "accion": "Verifica que todos los campos obligatorios estén diligenciados."
+    },
+    {
+     "n": 7,
+     "actor": "Sistema",
+     "accion": "Cambia el estado del perfil a EN_REVISION y lo encola en el panel administrativo."
+    },
+    {
+     "n": 8,
+     "actor": "Sistema → EXT-06",
+     "accion": "Envía los documentos al servicio de verificación documental."
+    },
+    {
+     "n": 9,
+     "actor": "EXT-06 → Sistema",
+     "accion": "Devuelve el resultado de la validación de identidad y títulos."
+    },
+    {
+     "n": 10,
+     "actor": "Administrador",
+     "accion": "Revisa el perfil junto con el resultado automático de la validación."
+    },
+    {
+     "n": 11,
+     "actor": "Administrador",
+     "accion": "Aprueba el perfil."
+    },
+    {
+     "n": 12,
+     "actor": "Sistema",
+     "accion": "Publica el perfil en estado ACTIVO, otorga el distintivo \"tutor verificado\" y notifica al tutor."
+    }
+   ],
+   "alternativos": [
+    {
+     "id": "A1",
+     "condicion": "El administrador solicita corrección en lugar de rechazar.",
+     "camino": "El perfil vuelve al estado REQUIERE_CORRECCION, el tutor recibe las observaciones puntuales, corrige y reenvía; el flujo retoma en el paso 6 sin reiniciar la validación documental ya superada."
+    },
+    {
+     "id": "A2",
+     "condicion": "El tutor modifica un campo sensible de un perfil ya aprobado (títulos, materias o identidad).",
+     "camino": "El perfil vuelve a EN_REVISION, pero permanece visible con la información aprobada anteriormente hasta que se resuelva la nueva revisión."
+    },
+    {
+     "id": "A3",
+     "condicion": "Un documento del tutor tiene fecha de vencimiento.",
+     "camino": "El sistema programa una revalidación antes del vencimiento; si no se renueva, retira el distintivo de verificado sin suspender la cuenta."
+    },
+    {
+     "id": "A4",
+     "condicion": "El tutor solicita una materia que no existe en el catálogo.",
+     "camino": "El sistema crea una solicitud de alta de materia dirigida al administrador; el resto del perfil continúa su revisión con las materias ya existentes."
+    },
+    {
+     "id": "A5",
+     "condicion": "El administrador aprueba el perfil pero limita las materias autorizadas.",
+     "camino": "Se publica el perfil solo con las materias respaldadas por los títulos presentados; las demás quedan en estado NO_AUTORIZADA."
+    }
+   ],
+   "excepciones": [
+    {
+     "id": "E1",
+     "excepcion": "El perfil está incompleto al enviarlo.",
+     "tratamiento": "El sistema no lo encola e indica exactamente qué campos faltan. El perfil permanece en estado BORRADOR."
+    },
+    {
+     "id": "E2",
+     "excepcion": "El documento cargado excede el tamaño permitido o tiene un formato no soportado.",
+     "tratamiento": "Se rechaza el archivo indicando los formatos y el límite admitidos; los demás documentos ya cargados se conservan."
+    },
+    {
+     "id": "E3",
+     "excepcion": "EXT-06 no está disponible o no responde.",
+     "tratamiento": "El sistema encola la validación y la reintenta. El caso pasa a revisión manual del administrador, que puede aprobar con verificación visual dejando constancia en la bitácora."
+    },
+    {
+     "id": "E4",
+     "excepcion": "La validación documental detecta inconsistencia entre la identidad declarada y el documento.",
+     "tratamiento": "El perfil se rechaza automáticamente, se notifica al tutor y el caso se marca para revisión de seguridad."
+    },
+    {
+     "id": "E5",
+     "excepcion": "El administrador detecta indicios de documento falsificado.",
+     "tratamiento": "Suspende la cuenta, registra el motivo en la bitácora de auditoría y bloquea el reenvío del perfil hasta nueva revisión manual."
+    },
+    {
+     "id": "E6",
+     "excepcion": "El tutor no responde a una solicitud de corrección.",
+     "tratamiento": "Transcurridos 30 días, el perfil pasa a estado INACTIVO y se notifica al tutor que debe reiniciar el proceso."
+    },
+    {
+     "id": "E7",
+     "excepcion": "El servicio de mensajería falla al notificar la decisión.",
+     "tratamiento": "La decisión se aplica igualmente y queda visible en el centro de notificaciones de la aplicación; el envío se reintenta según RF-M10-07."
+    }
+   ]
+  },
+  {
+   "id": "P-03",
+   "nombre": "Búsqueda de tutor",
+   "objetivo": "Permitir que el estudiante encuentre, compare y seleccione el tutor que mejor se ajusta a su necesidad académica.",
+   "actor": "ACT-01 Estudiante (o ACT-04 Visitante, con alcance limitado)",
+   "participantes": "Sistema, EXT-03 Geolocalización y mapas",
+   "disparador": "El estudiante escribe una materia o aplica un filtro en el buscador.",
+   "precondiciones": "Existe al menos un tutor verificado y activo en el catálogo.",
+   "entradas": "Materia, nivel educativo, modalidad, rango de precio, calificación mínima, ubicación.",
+   "salidas": "Listado ordenado de tutores y perfil detallado del tutor seleccionado.",
+   "postcondiciones": "El estudiante queda en posición de iniciar P-04 (reserva programada) o P-06 (tutoría inmediata).",
+   "requerimientos": "RF-M03-01 a RF-M03-08",
+   "diagrama": "flowchart TB\n  subgraph L1[\"ESTUDIANTE\"]\n    A1([\"Inicio · Escribe la materia<br/>que necesita\"])\n    A3[\"Aplica filtros de nivel,<br/>modalidad y precio\"]\n    A6[\"Consulta el perfil<br/>y los comentarios\"]\n    A7{\"¿Le sirve<br/>el tutor?\"}\n    F([\"Fin · Continúa a P-04<br/>o a P-06\"])\n  end\n  subgraph L2[\"SISTEMA TutoresOn-Line\"]\n    B2[\"Sugiere materias<br/>del catálogo\"]\n    B4[\"Consulta tutores ACTIVOS<br/>que cumplen los criterios\"]\n    B5{\"¿Hay<br/>resultados?\"}\n    B8[\"Ordena y muestra<br/>el listado de resultados\"]\n    B9[\"Sin resultados: sugiere<br/>tutores afines\"]\n  end\n  subgraph L3[\"EXTERNOS\"]\n    C1[\"EXT-03 · Calcula<br/>distancias\"]\n  end\n  A1 --> B2\n  B2 --> A3\n  A3 --> B4\n  B4 --> C1\n  C1 --> B5\n  B5 -- Sí --> B8\n  B5 -- No --> B9\n  B9 --> A3\n  B8 --> A6\n  A6 --> A7\n  A7 -- Sí --> F\n  A7 -- No --> A3\n  classDef lane1 fill:#e8eef7,stroke:#3b5f8a,color:#1b2b3f;\n  classDef lane2 fill:#eef3ec,stroke:#5f8a4a,color:#1f3f1b;\n  classDef lane3 fill:#f3efe6,stroke:#a0895f,color:#3f2f1b;\n  class A1,A3,A6,F lane1;\n  class B2,B4,B8,B9 lane2;\n  class C1 lane3;",
+   "flujo": [
+    {
+     "n": 1,
+     "actor": "Estudiante",
+     "accion": "Ingresa al buscador y escribe la materia que necesita."
+    },
+    {
+     "n": 2,
+     "actor": "Sistema",
+     "accion": "Muestra sugerencias del catálogo de materias a partir del tercer carácter."
+    },
+    {
+     "n": 3,
+     "actor": "Estudiante",
+     "accion": "Selecciona la materia y aplica los filtros de nivel, modalidad, precio y calificación mínima."
+    },
+    {
+     "n": 4,
+     "actor": "Sistema",
+     "accion": "Consulta los tutores en estado ACTIVO y verificados que cumplen todos los criterios."
+    },
+    {
+     "n": 5,
+     "actor": "Sistema → EXT-03",
+     "accion": "Si la modalidad es presencial, solicita el cálculo de distancias respecto a la ubicación del estudiante."
+    },
+    {
+     "n": 6,
+     "actor": "Sistema",
+     "accion": "Ordena los resultados por relevancia y actualiza el conteo de coincidencias."
+    },
+    {
+     "n": 7,
+     "actor": "Sistema",
+     "accion": "Muestra cada resultado con nombre, foto, materias, precio, calificación promedio, número de tutorías y estado de conexión."
+    },
+    {
+     "n": 8,
+     "actor": "Estudiante",
+     "accion": "Abre el perfil detallado de un tutor y revisa su formación, experiencia y comentarios de estudiantes anteriores."
+    },
+    {
+     "n": 9,
+     "actor": "Estudiante",
+     "accion": "Selecciona el tutor y continúa hacia la reserva programada (P-04) o la solicitud inmediata (P-06)."
+    }
+   ],
+   "alternativos": [
+    {
+     "id": "A1",
+     "condicion": "La búsqueda no arroja resultados.",
+     "camino": "El sistema informa la situación y sugiere tutores de materias afines o relaja automáticamente el filtro más restrictivo, indicando cuál modificó."
+    },
+    {
+     "id": "A2",
+     "condicion": "El estudiante ordena por cercanía.",
+     "camino": "El sistema solicita permiso de ubicación; si se concede, ordena por distancia. La opción solo se ofrece cuando el filtro de modalidad es presencial."
+    },
+    {
+     "id": "A3",
+     "condicion": "El estudiante busca sin haber iniciado sesión (Visitante).",
+     "camino": "El sistema muestra el listado y los perfiles públicos, pero exige registro al intentar reservar. Los filtros aplicados se conservan tras el registro."
+    },
+    {
+     "id": "A4",
+     "condicion": "El estudiante guarda tutores como favoritos.",
+     "camino": "Los tutores marcados quedan disponibles en su panel para una consulta posterior sin repetir la búsqueda."
+    },
+    {
+     "id": "A5",
+     "condicion": "El estudiante filtra por \"disponible ahora\".",
+     "camino": "El sistema restringe los resultados a tutores en estado EN_LINEA y enlaza directamente al flujo de tutoría bajo demanda (P-06)."
+    }
+   ],
+   "excepciones": [
+    {
+     "id": "E1",
+     "excepcion": "La materia escrita no existe en el catálogo.",
+     "tratamiento": "El sistema informa que no se encontró la materia, ofrece las más parecidas y permite registrar el interés para que el administrador evalúe darla de alta."
+    },
+    {
+     "id": "E2",
+     "excepcion": "EXT-03 no responde al solicitar distancias.",
+     "tratamiento": "El sistema muestra los resultados sin ordenamiento por cercanía e informa que el cálculo de distancia no está disponible temporalmente."
+    },
+    {
+     "id": "E3",
+     "excepcion": "El estudiante deniega el permiso de ubicación.",
+     "tratamiento": "El filtro de cercanía se deshabilita; el sistema ofrece ingresar la ciudad o el barrio manualmente."
+    },
+    {
+     "id": "E4",
+     "excepcion": "El perfil consultado fue suspendido mientras el estudiante lo revisaba.",
+     "tratamiento": "El sistema informa que el tutor ya no está disponible y devuelve al listado de resultados."
+    },
+    {
+     "id": "E5",
+     "excepcion": "La consulta excede el tiempo máximo de respuesta.",
+     "tratamiento": "El sistema muestra un resultado parcial con los tutores ya recuperados y ofrece reintentar la búsqueda completa."
+    },
+    {
+     "id": "E6",
+     "excepcion": "No existe ningún tutor verificado para la materia.",
+     "tratamiento": "El sistema informa la ausencia de oferta y ofrece notificar al estudiante cuando un tutor de esa materia sea aprobado."
+    }
+   ]
+  },
+  {
+   "id": "P-04",
+   "nombre": "Reserva de tutoría programada",
+   "objetivo": "Formalizar el acuerdo entre estudiante y tutor para una sesión en una fecha y hora futuras, con el pago garantizado.",
+   "actor": "ACT-01 Estudiante",
+   "participantes": "Sistema, ACT-02 Tutor, EXT-01 Pasarela de pagos, EXT-04 Mensajería",
+   "disparador": "El estudiante selecciona una franja disponible en el calendario del tutor.",
+   "precondiciones": "El estudiante está autenticado, el tutor está ACTIVO y tiene disponibilidad publicada.",
+   "entradas": "Fecha, hora, duración, materia, modalidad, tema a tratar, medio de pago.",
+   "salidas": "Sesión en estado CONFIRMADA con pago retenido, o solicitud cancelada con reembolso.",
+   "postcondiciones": "El bloque horario queda ocupado (RF-M04-04) y se programa la ejecución de la sesión (P-07).",
+   "requerimientos": "RF-M05-01 a RF-M05-08, RF-M09-02, RF-M10-02",
+   "diagrama": "flowchart TB\n  subgraph L1[\"ESTUDIANTE\"]\n    A1([\"Inicio · Selecciona franja, materia,<br/>modalidad y describe el tema\"])\n    A3[\"Revisa el costo total<br/>y confirma la solicitud\"]\n  end\n  subgraph L2[\"SISTEMA TutoresOn-Line\"]\n    B2[\"Calcula el costo: tarifa,<br/>comisión e impuestos\"]\n    B4[\"Autoriza y retiene el pago<br/>en la pasarela\"]\n    B5[\"Crea la solicitud PENDIENTE<br/>y notifica al tutor\"]\n    B8[\"Confirma la sesión, bloquea la franja<br/>y genera el recordatorio\"]\n    B9[\"Cancela la solicitud y<br/>libera la retención del pago\"]\n    F([\"Fin · Sesión programada<br/>continúa en P-07\"])\n  end\n  subgraph L3[\"TUTOR\"]\n    C1{\"¿Acepta la<br/>solicitud?\"}\n  end\n  A1 --> B2\n  B2 --> A3\n  A3 --> B4\n  B4 --> B5\n  B5 --> C1\n  C1 -- Acepta --> B8\n  C1 -- \"Rechaza o vence el plazo\" --> B9\n  B8 --> F\n  B9 --> F\n  classDef lane1 fill:#e8eef7,stroke:#3b5f8a,color:#1b2b3f;\n  classDef lane2 fill:#eef3ec,stroke:#5f8a4a,color:#1f3f1b;\n  classDef lane3 fill:#f3efe6,stroke:#a0895f,color:#3f2f1b;\n  class A1,A3 lane1;\n  class B2,B4,B5,B8,B9,F lane2;",
+   "flujo": [
+    {
+     "n": 1,
+     "actor": "Estudiante",
+     "accion": "Abre el calendario del tutor seleccionado en P-03."
+    },
+    {
+     "n": 2,
+     "actor": "Sistema",
+     "accion": "Muestra únicamente las franjas libres, futuras y que cumplen la antelación mínima del tutor."
+    },
+    {
+     "n": 3,
+     "actor": "Estudiante",
+     "accion": "Selecciona fecha, hora y duración, e indica materia, modalidad y tema a tratar."
+    },
+    {
+     "n": 4,
+     "actor": "Sistema",
+     "accion": "Calcula el costo total y muestra el desglose: tarifa, duración, comisión de la plataforma e impuestos."
+    },
+    {
+     "n": 5,
+     "actor": "Estudiante",
+     "accion": "Revisa el desglose, elige su medio de pago y confirma la solicitud."
+    },
+    {
+     "n": 6,
+     "actor": "Sistema → EXT-01",
+     "accion": "Autoriza el cobro y retiene el importe (estado RETENIDO)."
+    },
+    {
+     "n": 7,
+     "actor": "Sistema",
+     "accion": "Crea la solicitud en estado PENDIENTE_ACEPTACION y bloquea provisionalmente la franja."
+    },
+    {
+     "n": 8,
+     "actor": "Sistema → EXT-04",
+     "accion": "Notifica al tutor la nueva solicitud, indicando el plazo de respuesta de 12 horas."
+    },
+    {
+     "n": 9,
+     "actor": "Tutor",
+     "accion": "Revisa la solicitud y la acepta."
+    },
+    {
+     "n": 10,
+     "actor": "Sistema",
+     "accion": "Cambia la sesión a estado CONFIRMADA, marca el bloque como ocupado y notifica a ambas partes."
+    },
+    {
+     "n": 11,
+     "actor": "Sistema",
+     "accion": "Programa los recordatorios de 24 horas y 15 minutos antes de la sesión."
+    }
+   ],
+   "alternativos": [
+    {
+     "id": "A1",
+     "condicion": "El tutor rechaza la solicitud.",
+     "camino": "El sistema libera la franja y la retención del pago, notifica al estudiante y le sugiere otros tutores disponibles para la misma materia y franja."
+    },
+    {
+     "id": "A2",
+     "condicion": "El tutor no responde dentro de las 12 horas.",
+     "camino": "La solicitud se cancela automáticamente, se reembolsa el 100% y se registra el incumplimiento en la tasa de respuesta del tutor."
+    },
+    {
+     "id": "A3",
+     "condicion": "El estudiante cancela una sesión ya confirmada.",
+     "camino": "Se aplica la política RN-06: reembolso del 100% con más de 24 horas de antelación, 50% entre 24 y 2 horas, y sin reembolso con menos de 2 horas. La franja se libera."
+    },
+    {
+     "id": "A4",
+     "condicion": "El tutor cancela una sesión confirmada.",
+     "camino": "El estudiante recibe el 100% del reembolso independientemente de la antelación, y la cancelación afecta el indicador de confiabilidad del tutor."
+    },
+    {
+     "id": "A5",
+     "condicion": "Alguna de las partes solicita reprogramar.",
+     "camino": "El sistema envía la propuesta de nueva fecha a la contraparte; solo al aceptarla se libera la franja anterior y se reserva la nueva, conservando el pago retenido."
+    },
+    {
+     "id": "A6",
+     "condicion": "El estudiante reserva una sesión recurrente (por ejemplo, semanal).",
+     "camino": "El sistema genera una solicitud por cada ocurrencia y las presenta al tutor como un bloque, que puede aceptar en conjunto o individualmente."
+    }
+   ],
+   "excepciones": [
+    {
+     "id": "E1",
+     "excepcion": "Otro estudiante reserva la misma franja mientras el primero completa el formulario.",
+     "tratamiento": "El sistema detecta el conflicto al confirmar, informa que la franja ya no está disponible y devuelve al calendario actualizado sin cobrar nada."
+    },
+    {
+     "id": "E2",
+     "excepcion": "La autorización del pago es rechazada por la pasarela.",
+     "tratamiento": "La solicitud no se crea, la franja se libera y el sistema informa el motivo del rechazo ofreciendo cambiar el medio de pago."
+    },
+    {
+     "id": "E3",
+     "excepcion": "EXT-01 no responde durante la autorización.",
+     "tratamiento": "El sistema no confirma la reserva, deja la solicitud en estado PAGO_PENDIENTE y reintenta; si no hay respuesta en 10 minutos, cancela y notifica."
+    },
+    {
+     "id": "E4",
+     "excepcion": "El estudiante intenta reservar una franja que se solapa con otra sesión suya.",
+     "tratamiento": "El sistema rechaza la reserva e indica cuál es la sesión en conflicto."
+    },
+    {
+     "id": "E5",
+     "excepcion": "El estudiante intenta reservarse a sí mismo (usuario con rol dual).",
+     "tratamiento": "El sistema bloquea la operación por la regla RN-10."
+    },
+    {
+     "id": "E6",
+     "excepcion": "El tutor es suspendido entre la solicitud y su aceptación.",
+     "tratamiento": "El sistema cancela la solicitud, reembolsa el 100% y ofrece al estudiante tutores alternativos."
+    },
+    {
+     "id": "E7",
+     "excepcion": "El tema de la tutoría no cumple el mínimo de caracteres.",
+     "tratamiento": "El formulario no avanza e indica que la descripción del tema es obligatoria para que el tutor pueda decidir."
+    }
+   ]
+  },
+  {
+   "id": "P-05",
+   "nombre": "Gestión de disponibilidad",
+   "objetivo": "Permitir que el tutor declare cuándo puede atender tutorías, tanto de forma programada como inmediata.",
+   "actor": "ACT-02 Tutor",
+   "participantes": "Sistema",
+   "disparador": "El tutor abre su calendario o activa el modo de disponibilidad inmediata.",
+   "precondiciones": "El tutor tiene un perfil aprobado en estado ACTIVO (P-02 completado).",
+   "entradas": "Bloques horarios recurrentes, excepciones puntuales, antelación mínima, estado de conexión.",
+   "salidas": "Calendario publicado y estado EN_LINEA o DESCONECTADO.",
+   "postcondiciones": "La disponibilidad alimenta el calendario de P-04 y la lista de candidatos de P-06.",
+   "requerimientos": "RF-M04-01 a RF-M04-08",
+   "diagrama": "flowchart TB\n  subgraph L1[\"TUTOR\"]\n    A1([\"Inicio · Abre la gestión<br/>de disponibilidad\"])\n    A2{\"¿Qué desea<br/>configurar?\"}\n    A3[\"Define bloques semanales<br/>recurrentes y antelación mínima\"]\n    A4[\"Registra excepciones:<br/>ausencias o bloques extra\"]\n    A5[\"Activa el modo de<br/>disponibilidad inmediata\"]\n  end\n  subgraph L2[\"SISTEMA TutoresOn-Line\"]\n    B1{\"¿Hay solapamiento<br/>o conflicto?\"}\n    B2[\"Publica el calendario y<br/>expone las franjas al estudiante\"]\n    B3[\"Marca al tutor EN_LINEA<br/>y lo incluye como candidato en P-06\"]\n    B4[\"Rechaza el bloque e indica<br/>cuál genera el conflicto\"]\n    B5[\"Vigila la inactividad:<br/>a los 15 min pasa a DESCONECTADO\"]\n    F([\"Fin · Disponibilidad<br/>actualizada\"])\n  end\n  A1 --> A2\n  A2 -- Agenda programada --> A3\n  A2 -- Excepción puntual --> A4\n  A2 -- Atención inmediata --> A5\n  A3 --> B1\n  A4 --> B1\n  B1 -- No --> B2\n  B1 -- Sí --> B4\n  B4 --> A2\n  A5 --> B3\n  B3 --> B5\n  B2 --> F\n  B5 --> F\n  classDef lane1 fill:#e8eef7,stroke:#3b5f8a,color:#1b2b3f;\n  classDef lane2 fill:#eef3ec,stroke:#5f8a4a,color:#1f3f1b;\n  class A1,A3,A4,A5 lane1;\n  class B2,B3,B4,B5,F lane2;",
+   "flujo": [
+    {
+     "n": 1,
+     "actor": "Tutor",
+     "accion": "Ingresa a la sección de disponibilidad de su panel."
+    },
+    {
+     "n": 2,
+     "actor": "Tutor",
+     "accion": "Define sus bloques horarios recurrentes por día de la semana, expresados en su zona horaria."
+    },
+    {
+     "n": 3,
+     "actor": "Tutor",
+     "accion": "Establece la antelación mínima con la que acepta reservas programadas."
+    },
+    {
+     "n": 4,
+     "actor": "Sistema",
+     "accion": "Valida que los bloques no se solapen entre sí."
+    },
+    {
+     "n": 5,
+     "actor": "Sistema",
+     "accion": "Publica el calendario y expone las franjas libres a los estudiantes, convertidas a la zona horaria de cada uno."
+    },
+    {
+     "n": 6,
+     "actor": "Tutor",
+     "accion": "Registra las excepciones puntuales: días no disponibles, vacaciones o bloques adicionales."
+    },
+    {
+     "n": 7,
+     "actor": "Sistema",
+     "accion": "Aplica la excepción, que prevalece sobre la regla recurrente para esa fecha."
+    },
+    {
+     "n": 8,
+     "actor": "Tutor",
+     "accion": "Activa el modo de disponibilidad inmediata cuando desea atender solicitudes bajo demanda."
+    },
+    {
+     "n": 9,
+     "actor": "Sistema",
+     "accion": "Cambia el estado del tutor a EN_LINEA y lo incorpora al conjunto de candidatos del proceso P-06."
+    },
+    {
+     "n": 10,
+     "actor": "Sistema",
+     "accion": "Supervisa la actividad y la conexión del tutor mientras el modo permanezca activo."
+    }
+   ],
+   "alternativos": [
+    {
+     "id": "A1",
+     "condicion": "El tutor desactiva manualmente el modo de disponibilidad inmediata.",
+     "camino": "Pasa a estado DESCONECTADO y deja de recibir solicitudes bajo demanda; las sesiones ya asignadas no se ven afectadas."
+    },
+    {
+     "id": "A2",
+     "condicion": "El tutor permanece 15 minutos inactivo con el modo activo.",
+     "camino": "El sistema lo pasa automáticamente a DESCONECTADO y le notifica, evitando asignaciones a un tutor ausente."
+    },
+    {
+     "id": "A3",
+     "condicion": "El tutor elimina un bloque recurrente sin reservas asociadas.",
+     "camino": "El bloque se retira del calendario de inmediato y deja de ofrecerse."
+    },
+    {
+     "id": "A4",
+     "condicion": "El tutor duplica la disponibilidad de una semana en otra.",
+     "camino": "El sistema replica los bloques y advierte de las excepciones ya registradas en la semana destino."
+    },
+    {
+     "id": "A5",
+     "condicion": "El tutor cambia su zona horaria.",
+     "camino": "El sistema recalcula la presentación de todas las franjas y solicita confirmación explícita antes de aplicar el cambio a las sesiones ya confirmadas."
+    }
+   ],
+   "excepciones": [
+    {
+     "id": "E1",
+     "excepcion": "El nuevo bloque se solapa con uno existente.",
+     "tratamiento": "El sistema rechaza el registro e indica con cuál bloque se produce el solapamiento."
+    },
+    {
+     "id": "E2",
+     "excepcion": "El tutor intenta liberar un bloque que ya tiene una reserva confirmada.",
+     "tratamiento": "La operación se bloquea; el sistema explica que primero debe ejecutarse la cancelación de la sesión y enlaza al flujo correspondiente (A4 de P-04)."
+    },
+    {
+     "id": "E3",
+     "excepcion": "El tutor pierde la conexión con el modo inmediato activo.",
+     "tratamiento": "El sistema lo pasa a DESCONECTADO y reasigna cualquier solicitud pendiente que le hubiera sido difundida."
+    },
+    {
+     "id": "E4",
+     "excepcion": "El tutor registra una excepción sobre una fecha con sesiones ya confirmadas.",
+     "tratamiento": "El sistema lista las sesiones afectadas y exige decidir sobre cada una —cancelar o reprogramar— antes de aplicar la excepción."
+    },
+    {
+     "id": "E5",
+     "excepcion": "El bloque definido tiene una duración inferior a la mínima permitida.",
+     "tratamiento": "El sistema rechaza el bloque e informa la duración mínima configurada por la plataforma."
+    },
+    {
+     "id": "E6",
+     "excepcion": "El tutor activa el modo inmediato sin materias autorizadas.",
+     "tratamiento": "El sistema impide la activación y le indica que debe tener al menos una materia aprobada en su perfil."
+    }
+   ]
+  },
+  {
+   "id": "P-06",
+   "nombre": "Tutoría bajo demanda",
+   "objetivo": "Asignar en tiempo real un tutor disponible a un estudiante que necesita ayuda inmediata.",
+   "actor": "ACT-01 Estudiante",
+   "participantes": "Sistema, ACT-02 Tutores candidatos, EXT-01 Pasarela de pagos, EXT-03 Mapas, EXT-04 Mensajería",
+   "disparador": "El estudiante pulsa \"Necesito ayuda ahora\".",
+   "precondiciones": "El estudiante está autenticado y tiene un medio de pago válido registrado.",
+   "entradas": "Materia, tema, modalidad, duración estimada, ubicación si es presencial.",
+   "salidas": "Sesión asignada e iniciada, o solicitud en estado SIN_TUTOR.",
+   "postcondiciones": "Si hay asignación, la sesión continúa en P-07; si no, se ofrecen alternativas programadas.",
+   "requerimientos": "RF-M06-01 a RF-M06-09, RF-M04-05, RF-M10-03, RN-04, RN-05",
+   "diagrama": "flowchart TB\n  subgraph L1[\"ESTUDIANTE\"]\n    A1([\"Inicio · Solicita ayuda inmediata:<br/>materia, tema, modalidad\"])\n    A6[\"Recibe la asignación y<br/>los datos del tutor\"]\n  end\n  subgraph L2[\"SISTEMA · MOTOR DE ASIGNACIÓN\"]\n    B1[\"Retiene el pago y crea<br/>la solicitud BUSCANDO_TUTOR\"]\n    B2[\"Identifica candidatos<br/>EN_LINEA y verificados\"]\n    B3{\"¿Hay tutores<br/>candidatos?\"}\n    B4[\"Ordena por reputación<br/>y cercanía\"]\n    B5[\"Notifica al siguiente candidato<br/>con temporizador de 45 s\"]\n    B7{\"¿Aceptó algún<br/>tutor?\"}\n    B8[\"Asigna al primero que aceptó<br/>y retira la solicitud del resto\"]\n    B9{\"¿Se agotó el<br/>límite de 5 min?\"}\n    B10[\"Marca SIN_TUTOR y libera<br/>la retención del pago\"]\n    F([\"Fin · Continúa en P-07\"])\n  end\n  subgraph L3[\"TUTORES CANDIDATOS\"]\n    C1[\"Reciben la notificación<br/>y deciden en 45 s\"]\n  end\n  A1 --> B1\n  B1 --> B2\n  B2 --> B3\n  B3 -- Sí --> B4\n  B3 -- No --> B10\n  B4 --> B5\n  B5 --> C1\n  C1 --> B7\n  B7 -- Sí --> B8\n  B7 -- No --> B9\n  B9 -- No --> B5\n  B9 -- Sí --> B10\n  B8 --> A6\n  A6 --> F\n  B10 --> F\n  classDef lane1 fill:#e8eef7,stroke:#3b5f8a,color:#1b2b3f;\n  classDef lane2 fill:#eef3ec,stroke:#5f8a4a,color:#1f3f1b;\n  classDef lane3 fill:#f3efe6,stroke:#a0895f,color:#3f2f1b;\n  class A1,A6 lane1;\n  class B1,B2,B4,B5,B8,B10,F lane2;\n  class C1 lane3;",
+   "flujo": [
+    {
+     "n": 1,
+     "actor": "Estudiante",
+     "accion": "Pulsa \"Necesito ayuda ahora\" e indica materia, tema, modalidad y duración estimada."
+    },
+    {
+     "n": 2,
+     "actor": "Sistema → EXT-01",
+     "accion": "Autoriza y retiene el importe estimado de la sesión antes de iniciar la búsqueda."
+    },
+    {
+     "n": 3,
+     "actor": "Sistema",
+     "accion": "Crea la solicitud en estado BUSCANDO_TUTOR y activa el temporizador máximo de 5 minutos."
+    },
+    {
+     "n": 4,
+     "actor": "Sistema",
+     "accion": "Identifica los tutores candidatos: en estado EN_LINEA, verificados, con la materia solicitada y la modalidad habilitada."
+    },
+    {
+     "n": 5,
+     "actor": "Sistema → EXT-03",
+     "accion": "Si la modalidad es presencial, calcula la cercanía de cada candidato."
+    },
+    {
+     "n": 6,
+     "actor": "Sistema",
+     "accion": "Ordena los candidatos ponderando reputación, cercanía y tasa histórica de aceptación."
+    },
+    {
+     "n": 7,
+     "actor": "Sistema → EXT-04",
+     "accion": "Notifica al primer candidato con un temporizador de respuesta de 45 segundos."
+    },
+    {
+     "n": 8,
+     "actor": "Tutor",
+     "accion": "Recibe la notificación con materia, tema y valor de la sesión, y acepta."
+    },
+    {
+     "n": 9,
+     "actor": "Sistema",
+     "accion": "Asigna la sesión al tutor que aceptó y retira la solicitud del resto de candidatos."
+    },
+    {
+     "n": 10,
+     "actor": "Sistema",
+     "accion": "Informa al estudiante los datos del tutor asignado y encadena el proceso P-07."
+    }
+   ],
+   "alternativos": [
+    {
+     "id": "A1",
+     "condicion": "El primer candidato rechaza o deja vencer los 45 segundos.",
+     "camino": "El sistema pasa la solicitud al siguiente candidato de la lista ordenada, sin reiniciar el temporizador global de 5 minutos."
+    },
+    {
+     "id": "A2",
+     "condicion": "Varios tutores aceptan casi simultáneamente.",
+     "camino": "Se aplica RN-04: la asignación es para el primero registrado por el sistema; a los demás se les muestra \"solicitud ya asignada\" en menos de 3 segundos."
+    },
+    {
+     "id": "A3",
+     "condicion": "La solicitud es presencial.",
+     "camino": "El sistema muestra al estudiante la zona aproximada de los candidatos; la dirección exacta del punto de encuentro solo se revela una vez confirmada y pagada la sesión."
+    },
+    {
+     "id": "A4",
+     "condicion": "El estudiante cancela mientras la solicitud está en BUSCANDO_TUTOR.",
+     "camino": "La búsqueda se detiene, la retención del pago se libera íntegramente y no se aplica ningún cargo."
+    },
+    {
+     "id": "A5",
+     "condicion": "No se consigue tutor dentro de los 5 minutos.",
+     "camino": "La solicitud pasa a SIN_TUTOR, se libera la retención y el sistema ofrece agendar una reserva programada (P-04) con tutores de esa materia."
+    },
+    {
+     "id": "A6",
+     "condicion": "La sesión se extiende más allá de la duración estimada.",
+     "camino": "El sistema cobra el tiempo adicional al finalizar, según la tarifa por hora del tutor, previa aceptación del estudiante."
+    }
+   ],
+   "excepciones": [
+    {
+     "id": "E1",
+     "excepcion": "La autorización del pago falla.",
+     "tratamiento": "La solicitud no se difunde. El sistema informa el motivo y solicita otro medio de pago antes de reintentar."
+    },
+    {
+     "id": "E2",
+     "excepcion": "No hay ningún tutor EN_LINEA para la materia solicitada.",
+     "tratamiento": "El sistema informa la situación de inmediato, sin agotar los 5 minutos, y ofrece la reserva programada o una notificación cuando haya tutores disponibles."
+    },
+    {
+     "id": "E3",
+     "excepcion": "El tutor asignado pierde la conexión antes de iniciar la sesión.",
+     "tratamiento": "El sistema anula la asignación, reanuda la difusión con los candidatos restantes y conserva el tiempo restante del temporizador global."
+    },
+    {
+     "id": "E4",
+     "excepcion": "La notificación en tiempo real no llega a los candidatos.",
+     "tratamiento": "El sistema reintenta por un canal alterno y, si el fallo persiste, registra el incidente y continúa con el siguiente candidato."
+    },
+    {
+     "id": "E5",
+     "excepcion": "El estudiante lanza varias solicitudes inmediatas simultáneas.",
+     "tratamiento": "El sistema permite solo una solicitud activa por estudiante y muestra la existente."
+    },
+    {
+     "id": "E6",
+     "excepcion": "EXT-03 falla en una solicitud presencial.",
+     "tratamiento": "El sistema continúa la difusión sin ponderar cercanía e informa al estudiante que la distancia no pudo calcularse."
+    },
+    {
+     "id": "E7",
+     "excepcion": "El tutor acepta pero la sesión nunca inicia.",
+     "tratamiento": "Transcurrido el margen de tolerancia, la solicitud se anula, se reembolsa al estudiante y el incumplimiento afecta la tasa de confiabilidad del tutor."
+    }
+   ]
+  },
+  {
+   "id": "P-07",
+   "nombre": "Ejecución de la sesión de tutoría",
+   "objetivo": "Habilitar, ejecutar y cerrar la sesión de tutoría en la modalidad acordada, dejando registro de su duración efectiva.",
+   "actor": "Sistema (por programación) o ACT-01/ACT-02 al conectarse",
+   "participantes": "Estudiante, Tutor, EXT-02 Videoconferencia, EXT-03 Mapas, EXT-04 Mensajería",
+   "disparador": "Se aproxima la hora de una sesión confirmada, o se asigna una tutoría bajo demanda.",
+   "precondiciones": "Existe una sesión en estado CONFIRMADA o ASIGNADA con el pago retenido.",
+   "entradas": "Datos de la sesión, material de apoyo, marcas de conexión de las partes.",
+   "salidas": "Sesión en estado FINALIZADA con duración efectiva registrada, o NO_REALIZADA.",
+   "postcondiciones": "Se disparan los procesos P-08 (calificación) y P-09 (liquidación del pago).",
+   "requerimientos": "RF-M07-01 a RF-M07-07, RF-M10-04",
+   "diagrama": "flowchart TB\n  subgraph L1[\"ESTUDIANTE Y TUTOR\"]\n    A1([\"Inicio · Acceden<br/>a la sesión\"])\n    A4[\"Desarrollan la tutoría<br/>y comparten material\"]\n    A5[\"Marcan la sesión<br/>como finalizada\"]\n  end\n  subgraph L2[\"SISTEMA TutoresOn-Line\"]\n    B1{\"¿Modalidad<br/>de la sesión?\"}\n    B4[\"Registra la hora de inicio<br/>y habilita el chat\"]\n    B5{\"¿Ambas partes<br/>se conectaron?\"}\n    B6[\"Calcula la duración<br/>efectiva y cierra\"]\n    B7[\"Registra inasistencia y<br/>abre el caso en P-11\"]\n    F([\"Fin · Continúa en<br/>P-08 y P-09\"])\n  end\n  subgraph L3[\"SERVICIOS EXTERNOS\"]\n    C1[\"EXT-02 · Genera el enlace<br/>de videoconferencia\"]\n    C2[\"EXT-03 · Comparte el<br/>punto de encuentro\"]\n  end\n  A1 --> B1\n  B1 -- Virtual --> C1\n  B1 -- Presencial --> C2\n  C1 --> B4\n  C2 --> B4\n  B4 --> B5\n  B5 -- Sí --> A4\n  B5 -- No --> B7\n  A4 --> A5\n  A5 --> B6\n  B6 --> F\n  B7 --> F\n  classDef lane1 fill:#e8eef7,stroke:#3b5f8a,color:#1b2b3f;\n  classDef lane2 fill:#eef3ec,stroke:#5f8a4a,color:#1f3f1b;\n  classDef lane3 fill:#f3efe6,stroke:#a0895f,color:#3f2f1b;\n  class A1,A4,A5 lane1;\n  class B4,B6,B7,F lane2;\n  class C1,C2 lane3;",
+   "flujo": [
+    {
+     "n": 1,
+     "actor": "Sistema → EXT-04",
+     "accion": "Envía los recordatorios de 24 horas y 15 minutos antes de la sesión programada."
+    },
+    {
+     "n": 2,
+     "actor": "Sistema",
+     "accion": "Determina la modalidad de la sesión."
+    },
+    {
+     "n": 3,
+     "actor": "Sistema → EXT-02",
+     "accion": "Si es virtual, solicita la creación de la sala y habilita el enlace 10 minutos antes de la hora pactada."
+    },
+    {
+     "n": 4,
+     "actor": "Sistema",
+     "accion": "Envía el enlace de acceso a ambas partes."
+    },
+    {
+     "n": 5,
+     "actor": "Estudiante y Tutor",
+     "accion": "Acceden a la sesión."
+    },
+    {
+     "n": 6,
+     "actor": "Sistema",
+     "accion": "Registra la hora real de inicio y habilita el canal de mensajería interna de la sesión."
+    },
+    {
+     "n": 7,
+     "actor": "Estudiante y Tutor",
+     "accion": "Desarrollan la tutoría y comparten material de apoyo si es necesario."
+    },
+    {
+     "n": 8,
+     "actor": "Estudiante o Tutor",
+     "accion": "Marca la sesión como finalizada."
+    },
+    {
+     "n": 9,
+     "actor": "Sistema",
+     "accion": "Registra la hora de finalización y calcula la duración efectiva."
+    },
+    {
+     "n": 10,
+     "actor": "Sistema",
+     "accion": "Cambia la sesión a estado FINALIZADA y dispara los procesos P-08 y P-09."
+    }
+   ],
+   "alternativos": [
+    {
+     "id": "A1",
+     "condicion": "La sesión es presencial.",
+     "camino": "El sistema no genera enlace de videoconferencia; muestra a ambas partes el punto de encuentro acordado y habilita el chat para coordinar detalles de última hora."
+    },
+    {
+     "id": "A2",
+     "condicion": "La sesión proviene del modelo bajo demanda (P-06).",
+     "camino": "No hay recordatorios previos: el enlace se genera de inmediato al asignarse el tutor y la sesión inicia en cuestión de segundos."
+    },
+    {
+     "id": "A3",
+     "condicion": "La sesión se extiende más allá de la duración pactada.",
+     "camino": "El sistema registra el tiempo adicional y lo informa a ambas partes; el cobro adicional se liquida en P-09 previa aceptación del estudiante."
+    },
+    {
+     "id": "A4",
+     "condicion": "Ninguna de las partes marca la sesión como finalizada.",
+     "camino": "El sistema la cierra automáticamente al vencer la duración pactada más un margen de 15 minutos, usando la duración efectiva registrada."
+    },
+    {
+     "id": "A5",
+     "condicion": "Las partes acuerdan terminar antes de tiempo.",
+     "camino": "La sesión se cierra con la duración efectiva real; la liquidación en P-09 se ajusta proporcionalmente si supera el mínimo facturable."
+    }
+   ],
+   "excepciones": [
+    {
+     "id": "E1",
+     "excepcion": "EXT-02 no genera la sala de videoconferencia.",
+     "tratamiento": "El sistema reintenta y, si falla, ofrece un enlace alterno o reprograma la sesión sin penalización para ninguna de las partes."
+    },
+    {
+     "id": "E2",
+     "excepcion": "El estudiante no se conecta dentro de los 15 minutos de tolerancia.",
+     "tratamiento": "El tutor puede reportar la inasistencia. La sesión pasa a NO_REALIZADA_ESTUDIANTE y se libera el pago al tutor según la política vigente."
+    },
+    {
+     "id": "E3",
+     "excepcion": "El tutor no se conecta dentro de los 15 minutos de tolerancia.",
+     "tratamiento": "La sesión pasa a NO_REALIZADA_TUTOR, se reembolsa el 100% al estudiante y el incumplimiento afecta el indicador de confiabilidad del tutor."
+    },
+    {
+     "id": "E4",
+     "excepcion": "Una de las partes pierde la conexión durante la sesión.",
+     "tratamiento": "El sistema mantiene la sala abierta y permite reingresar durante 10 minutos; si no reingresa, se registra el corte y el caso queda disponible para disputa en P-11."
+    },
+    {
+     "id": "E5",
+     "excepcion": "Se reporta una conducta inapropiada durante la sesión.",
+     "tratamiento": "Cualquiera de las partes puede reportar el incidente, lo que abre un caso prioritario en P-11 y suspende la liberación del pago."
+    },
+    {
+     "id": "E6",
+     "excepcion": "La sesión presencial no se realiza porque las partes no se encuentran.",
+     "tratamiento": "Ambas pueden reportarlo; el caso pasa a P-11 y el pago permanece retenido hasta la resolución."
+    },
+    {
+     "id": "E7",
+     "excepcion": "El adjunto compartido excede el tamaño permitido.",
+     "tratamiento": "El sistema rechaza el archivo e informa el límite, sin interrumpir la sesión en curso."
+    }
+   ]
+  },
+  {
+   "id": "P-08",
+   "nombre": "Sistema de calificación",
+   "objetivo": "Construir y mantener la reputación de tutores y estudiantes a partir de valoraciones verificadas de sesiones realmente realizadas.",
+   "actor": "Sistema (al finalizar una sesión)",
+   "participantes": "Estudiante, Tutor, ACT-03 Administrador",
+   "disparador": "Una sesión pasa a estado FINALIZADA en P-07.",
+   "precondiciones": "La sesión se realizó efectivamente (RN-07).",
+   "entradas": "Calificación de 1 a 5 estrellas, comentario opcional, valoración del estudiante por parte del tutor.",
+   "salidas": "Calificaciones publicadas y promedio de reputación recalculado.",
+   "postcondiciones": "El nuevo promedio alimenta el filtro de búsqueda de P-03 y las alertas de P-11.",
+   "requerimientos": "RF-M08-01 a RF-M08-08, RN-07, RN-08",
+   "diagrama": "flowchart TB\n  subgraph L1[\"ESTUDIANTE Y TUTOR\"]\n    A1([\"Inicio · Sesión finalizada:<br/>se solicita la calificación\"])\n    A2[\"Estudiante califica de 1 a 5<br/>y escribe su comentario\"]\n    A3[\"Tutor valora puntualidad<br/>y actitud del estudiante\"]\n  end\n  subgraph L2[\"SISTEMA TutoresOn-Line\"]\n    B1{\"¿La sesión se<br/>realizó?\"}\n    B4{\"¿Ambas partes<br/>calificaron?\"}\n    B5[\"Publica ambas calificaciones<br/>de forma simultánea\"]\n    B6[\"Espera hasta 7 días y publica<br/>lo recibido al vencer el plazo\"]\n    B7[\"Recalcula el promedio del tutor<br/>y su número de valoraciones\"]\n    B8{\"¿Promedio < 3,0<br/>con 10 o más?\"}\n    B9[\"Genera alerta al administrador<br/>y caso de revisión en P-11\"]\n    B10[\"No habilita calificación:<br/>sesión no realizada\"]\n    F([\"Fin · Reputación<br/>actualizada\"])\n  end\n  A1 --> B1\n  B1 -- Sí --> A2\n  B1 -- No --> B10\n  A2 --> A3\n  A3 --> B4\n  B4 -- Sí --> B5\n  B4 -- No --> B6\n  B6 --> B5\n  B5 --> B7\n  B7 --> B8\n  B8 -- Sí --> B9\n  B8 -- No --> F\n  B9 --> F\n  B10 --> F\n  classDef lane1 fill:#e8eef7,stroke:#3b5f8a,color:#1b2b3f;\n  classDef lane2 fill:#eef3ec,stroke:#5f8a4a,color:#1f3f1b;\n  class A1,A2,A3 lane1;\n  class B5,B6,B7,B9,B10,F lane2;",
+   "flujo": [
+    {
+     "n": 1,
+     "actor": "Sistema",
+     "accion": "Detecta que la sesión pasó a FINALIZADA y verifica que efectivamente se realizó."
+    },
+    {
+     "n": 2,
+     "actor": "Sistema",
+     "accion": "Solicita al estudiante la calificación de 1 a 5 estrellas y un comentario opcional."
+    },
+    {
+     "n": 3,
+     "actor": "Estudiante",
+     "accion": "Califica al tutor y escribe su comentario."
+    },
+    {
+     "n": 4,
+     "actor": "Sistema",
+     "accion": "Solicita al tutor la valoración del estudiante en puntualidad y actitud."
+    },
+    {
+     "n": 5,
+     "actor": "Tutor",
+     "accion": "Registra su valoración."
+    },
+    {
+     "n": 6,
+     "actor": "Sistema",
+     "accion": "Al contar con ambas valoraciones, las publica de forma simultánea (RN-08)."
+    },
+    {
+     "n": 7,
+     "actor": "Sistema",
+     "accion": "Recalcula la calificación promedio del tutor y actualiza el número de valoraciones que la sustentan."
+    },
+    {
+     "n": 8,
+     "actor": "Sistema",
+     "accion": "Actualiza el perfil público del tutor y los resultados de búsqueda con el nuevo promedio."
+    },
+    {
+     "n": 9,
+     "actor": "Sistema",
+     "accion": "Evalúa si el promedio cae por debajo del umbral de calidad definido."
+    }
+   ],
+   "alternativos": [
+    {
+     "id": "A1",
+     "condicion": "Solo una de las partes califica.",
+     "camino": "Transcurridos 7 días, el sistema publica la calificación recibida y cierra el periodo de valoración de esa sesión."
+    },
+    {
+     "id": "A2",
+     "condicion": "Ninguna de las partes califica.",
+     "camino": "La sesión se cierra sin valoración y no afecta el promedio de reputación de ninguna de las partes."
+    },
+    {
+     "id": "A3",
+     "condicion": "El tutor responde públicamente a un comentario recibido.",
+     "camino": "La respuesta se publica anidada bajo el comentario original; solo se permite una respuesta por comentario."
+    },
+    {
+     "id": "A4",
+     "condicion": "El sistema envía un recordatorio de calificación.",
+     "camino": "A las 24 horas de finalizada la sesión, se recuerda a quien no haya calificado, sin bloquear el uso de la plataforma."
+    },
+    {
+     "id": "A5",
+     "condicion": "El promedio del tutor cae por debajo de 3,0 con al menos 10 valoraciones.",
+     "camino": "El sistema genera una alerta al administrador y abre un caso de revisión de calidad en P-11, sin ocultar el perfil automáticamente."
+    }
+   ],
+   "excepciones": [
+    {
+     "id": "E1",
+     "excepcion": "Se intenta calificar una sesión cancelada o no realizada.",
+     "tratamiento": "El sistema no habilita el formulario y explica que solo se califican las sesiones efectivamente realizadas (RN-07)."
+    },
+    {
+     "id": "E2",
+     "excepcion": "El comentario contiene lenguaje ofensivo o datos personales.",
+     "tratamiento": "El filtro automático lo retiene, lo oculta del perfil público y abre un caso de moderación en P-11."
+    },
+    {
+     "id": "E3",
+     "excepcion": "Un usuario intenta calificar dos veces la misma sesión.",
+     "tratamiento": "El sistema rechaza la segunda calificación; solo se permite editarla dentro de la primera hora y antes de su publicación."
+    },
+    {
+     "id": "E4",
+     "excepcion": "Se detecta un patrón de calificaciones fraudulentas entre las mismas cuentas.",
+     "tratamiento": "El sistema marca las valoraciones como sospechosas, las excluye del cálculo del promedio y notifica al administrador."
+    },
+    {
+     "id": "E5",
+     "excepcion": "Una calificación es reportada por una de las partes.",
+     "tratamiento": "El comentario se oculta hasta que el administrador lo revise en P-11; el promedio se recalcula si finalmente se elimina."
+    },
+    {
+     "id": "E6",
+     "excepcion": "La sesión fue objeto de una disputa resuelta a favor del estudiante.",
+     "tratamiento": "La calificación permanece, pero el caso se anota en el historial del tutor para el seguimiento de calidad."
+    }
+   ]
+  },
+  {
+   "id": "P-09",
+   "nombre": "Gestión de pagos, comisiones y liquidación",
+   "objetivo": "Garantizar que el estudiante pague de forma segura, que el tutor reciba su liquidación y que la plataforma perciba su comisión.",
+   "actor": "Sistema",
+   "participantes": "Estudiante, Tutor, ACT-03 Administrador, EXT-01 Pasarela de pagos",
+   "disparador": "Se confirma una reserva (P-04) o se asigna una tutoría bajo demanda (P-06).",
+   "precondiciones": "El estudiante tiene un medio de pago válido y el tutor una cuenta bancaria registrada.",
+   "entradas": "Valor de la sesión, porcentaje de comisión, duración efectiva, política de cancelación.",
+   "salidas": "Pago liberado al tutor, comisión registrada, comprobantes emitidos o reembolso procesado.",
+   "postcondiciones": "Las transacciones quedan disponibles para la conciliación diaria y los reportes de M12.",
+   "requerimientos": "RF-M09-01 a RF-M09-08, RN-02, RN-03, RN-06",
+   "diagrama": "flowchart TB\n  subgraph L1[\"SISTEMA · MOTOR FINANCIERO\"]\n    A1([\"Inicio · Sesión confirmada<br/>o asignada\"])\n    A2[\"Calcula el valor: tarifa,<br/>comisión del 15% e impuestos\"]\n    A4[\"Marca el importe como RETENIDO<br/>y emite el comprobante\"]\n    A5{\"¿Sesión<br/>finalizada?\"}\n    A6{\"¿Hay disputa<br/>abierta?\"}\n    A7[\"Espera el periodo de<br/>garantía de 48 horas\"]\n    A8[\"Libera al tutor el neto y<br/>registra la comisión\"]\n    A9[\"Aplica la política de cancelación<br/>y procesa el reembolso\"]\n    A10[\"Suspende la liberación<br/>hasta resolver en P-11\"]\n    F([\"Fin · Transacción cerrada<br/>y conciliada\"])\n  end\n  subgraph L2[\"EXT-01 · PASARELA DE PAGOS\"]\n    C1[\"Autoriza y retiene<br/>el importe\"]\n    C2[\"Dispersa el pago a la<br/>cuenta del tutor\"]\n  end\n  A1 --> A2\n  A2 --> C1\n  C1 --> A4\n  A4 --> A5\n  A5 -- Sí --> A6\n  A5 -- \"No: cancelada\" --> A9\n  A6 -- No --> A7\n  A6 -- Sí --> A10\n  A7 --> A8\n  A8 --> C2\n  C2 --> F\n  A9 --> F\n  A10 --> F\n  classDef lane1 fill:#eef3ec,stroke:#5f8a4a,color:#1f3f1b;\n  classDef lane2 fill:#f3efe6,stroke:#a0895f,color:#3f2f1b;\n  class A2,A4,A7,A8,A9,A10,F lane1;\n  class C1,C2 lane2;",
+   "flujo": [
+    {
+     "n": 1,
+     "actor": "Sistema",
+     "accion": "Recibe la confirmación de una reserva o la asignación de una tutoría bajo demanda."
+    },
+    {
+     "n": 2,
+     "actor": "Sistema",
+     "accion": "Calcula el valor de la sesión, la comisión de la plataforma (15%, RN-03) y los impuestos aplicables."
+    },
+    {
+     "n": 3,
+     "actor": "Sistema → EXT-01",
+     "accion": "Autoriza el cobro al medio de pago del estudiante y retiene el importe."
+    },
+    {
+     "n": 4,
+     "actor": "Sistema",
+     "accion": "Marca la transacción como RETENIDA y emite el comprobante electrónico al estudiante."
+    },
+    {
+     "n": 5,
+     "actor": "Sistema",
+     "accion": "Espera la finalización de la sesión en P-07."
+    },
+    {
+     "n": 6,
+     "actor": "Sistema",
+     "accion": "Verifica que no exista ninguna disputa abierta sobre la sesión."
+    },
+    {
+     "n": 7,
+     "actor": "Sistema",
+     "accion": "Deja transcurrir el periodo de garantía de 48 horas (RN-02)."
+    },
+    {
+     "n": 8,
+     "actor": "Sistema",
+     "accion": "Calcula el neto del tutor descontando la comisión y registra el ingreso de la plataforma."
+    },
+    {
+     "n": 9,
+     "actor": "Sistema → EXT-01",
+     "accion": "Ordena la dispersión del neto a la cuenta bancaria del tutor."
+    },
+    {
+     "n": 10,
+     "actor": "Sistema",
+     "accion": "Emite la liquidación al tutor y actualiza su saldo disponible."
+    },
+    {
+     "n": 11,
+     "actor": "Sistema",
+     "accion": "Incluye la transacción en la conciliación diaria contra el reporte de la pasarela."
+    }
+   ],
+   "alternativos": [
+    {
+     "id": "A1",
+     "condicion": "La sesión se cancela con más de 24 horas de antelación.",
+     "camino": "Se reembolsa el 100% al estudiante, no se genera comisión y la transacción se cierra como REEMBOLSADA."
+    },
+    {
+     "id": "A2",
+     "condicion": "La sesión se cancela entre 24 y 2 horas antes.",
+     "camino": "Se reembolsa el 50%; el 50% restante se liquida al tutor descontando la comisión proporcional (RN-06)."
+    },
+    {
+     "id": "A3",
+     "condicion": "La sesión se cancela con menos de 2 horas de antelación.",
+     "camino": "No hay reembolso; el importe completo se liquida al tutor descontando la comisión."
+    },
+    {
+     "id": "A4",
+     "condicion": "La sesión bajo demanda excede la duración estimada.",
+     "camino": "El sistema calcula el excedente, solicita la aceptación del estudiante y genera un cobro complementario antes de la liquidación."
+    },
+    {
+     "id": "A5",
+     "condicion": "El tutor solicita retiro anticipado de su saldo disponible.",
+     "camino": "El sistema permite la dispersión sobre el saldo ya liberado, nunca sobre importes aún retenidos."
+    },
+    {
+     "id": "A6",
+     "condicion": "Se resuelve una disputa a favor del estudiante.",
+     "camino": "El sistema procesa el reembolso total o parcial según la decisión del administrador y ajusta la comisión correspondiente."
+    }
+   ],
+   "excepciones": [
+    {
+     "id": "E1",
+     "excepcion": "El medio de pago del estudiante es rechazado.",
+     "tratamiento": "La sesión no se confirma. El sistema informa el motivo devuelto por la pasarela y solicita otro medio de pago."
+    },
+    {
+     "id": "E2",
+     "excepcion": "EXT-01 no responde durante la autorización o la dispersión.",
+     "tratamiento": "La operación se marca como PENDIENTE y se reintenta de forma idempotente, evitando cobros o pagos duplicados (RNF-07)."
+    },
+    {
+     "id": "E3",
+     "excepcion": "La dispersión al tutor falla por datos bancarios incorrectos.",
+     "tratamiento": "El saldo permanece disponible en la plataforma, se notifica al tutor para que corrija sus datos y se reintenta la dispersión."
+    },
+    {
+     "id": "E4",
+     "excepcion": "La conciliación diaria detecta una diferencia.",
+     "tratamiento": "El sistema genera una alerta al administrador con el detalle de las transacciones descuadradas y bloquea las dispersiones afectadas hasta su revisión."
+    },
+    {
+     "id": "E5",
+     "excepcion": "Se abre una disputa dentro del periodo de garantía.",
+     "tratamiento": "La liberación del pago se suspende hasta la resolución del caso en P-11 (RN-02)."
+    },
+    {
+     "id": "E6",
+     "excepcion": "El estudiante desconoce el cargo ante su banco.",
+     "tratamiento": "El sistema recibe la notificación de la pasarela, congela el saldo asociado y abre un caso de investigación para el administrador."
+    },
+    {
+     "id": "E7",
+     "excepcion": "El tutor no ha registrado cuenta bancaria al momento de la liberación.",
+     "tratamiento": "El neto se acumula como saldo disponible y se notifica al tutor; la dispersión se ejecuta cuando registre sus datos."
+    }
+   ]
+  },
+  {
+   "id": "P-10",
+   "nombre": "Notificación de tutoría",
+   "objetivo": "Entregar a cada usuario, por el canal adecuado y en el tiempo adecuado, la información que necesita para actuar.",
+   "actor": "Sistema (evento de negocio)",
+   "participantes": "Estudiante, Tutor, ACT-03 Administrador, EXT-04 Servicio de mensajería",
+   "disparador": "Ocurre un evento notificable: nueva solicitud, confirmación, cancelación, recordatorio, pago liberado, resolución de disputa.",
+   "precondiciones": "El usuario destinatario tiene preferencias de notificación configuradas o las predeterminadas.",
+   "entradas": "Tipo de evento, destinatario, criticidad, datos de la plantilla.",
+   "salidas": "Notificación entregada por uno o varios canales y registrada en el centro de notificaciones.",
+   "postcondiciones": "El evento queda trazado con su acuse de entrega o su registro de fallo.",
+   "requerimientos": "RF-M10-01 a RF-M10-08",
+   "diagrama": "flowchart TB\n  subgraph L1[\"SISTEMA · ORQUESTADOR DE NOTIFICACIONES\"]\n    A1([\"Inicio · Se produce un<br/>evento notificable\"])\n    A2[\"Identifica destinatario, plantilla<br/>y criticidad del evento\"]\n    A3{\"¿Es una notificación<br/>crítica?\"}\n    A4[\"Selecciona todos los canales:<br/>push, correo y aplicación\"]\n    A5[\"Aplica las preferencias<br/>del usuario\"]\n    A6[\"Compone el mensaje<br/>con la plantilla\"]\n    A9{\"¿Entrega<br/>exitosa?\"}\n    A10[\"Registra el acuse y guarda<br/>en el centro de notificaciones\"]\n    A11{\"¿Quedan<br/>reintentos?\"}\n    A12[\"Registra el fallo; conserva la<br/>notificación en la aplicación\"]\n    F([\"Fin\"])\n  end\n  subgraph L2[\"EXT-04 · SERVICIO DE MENSAJERÍA\"]\n    C1[\"Envía por push, correo o SMS<br/>y devuelve el acuse\"]\n  end\n  A1 --> A2\n  A2 --> A3\n  A3 -- Sí --> A4\n  A3 -- No --> A5\n  A4 --> A6\n  A5 --> A6\n  A6 --> C1\n  C1 --> A9\n  A9 -- Sí --> A10\n  A9 -- No --> A11\n  A11 -- Sí --> C1\n  A11 -- No --> A12\n  A10 --> F\n  A12 --> F\n  classDef lane1 fill:#eef3ec,stroke:#5f8a4a,color:#1f3f1b;\n  classDef lane2 fill:#f3efe6,stroke:#a0895f,color:#3f2f1b;\n  class A2,A4,A5,A6,A10,A12,F lane1;\n  class C1 lane2;",
+   "flujo": [
+    {
+     "n": 1,
+     "actor": "Sistema",
+     "accion": "Detecta un evento notificable generado por otro proceso."
+    },
+    {
+     "n": 2,
+     "actor": "Sistema",
+     "accion": "Identifica al destinatario, la plantilla correspondiente y la criticidad del evento."
+    },
+    {
+     "n": 3,
+     "actor": "Sistema",
+     "accion": "Consulta las preferencias de notificación del usuario y determina los canales a usar."
+    },
+    {
+     "n": 4,
+     "actor": "Sistema",
+     "accion": "Compone el mensaje reemplazando las variables de la plantilla con los datos del evento."
+    },
+    {
+     "n": 5,
+     "actor": "Sistema → EXT-04",
+     "accion": "Envía la notificación por los canales seleccionados."
+    },
+    {
+     "n": 6,
+     "actor": "EXT-04 → Sistema",
+     "accion": "Devuelve el acuse de entrega."
+    },
+    {
+     "n": 7,
+     "actor": "Sistema",
+     "accion": "Registra el acuse y almacena la notificación en el centro de notificaciones de la aplicación."
+    },
+    {
+     "n": 8,
+     "actor": "Usuario",
+     "accion": "Consulta la notificación y actúa sobre ella desde el enlace incluido."
+    }
+   ],
+   "alternativos": [
+    {
+     "id": "A1",
+     "condicion": "El evento es crítico (seguridad, pago o asignación bajo demanda).",
+     "camino": "El sistema ignora las preferencias de silencio y envía por todos los canales disponibles; estas notificaciones no son desactivables (RF-M10-06)."
+    },
+    {
+     "id": "A2",
+     "condicion": "El evento es un recordatorio de sesión.",
+     "camino": "El sistema programa dos envíos —24 horas y 15 minutos antes— y cancela los pendientes si la sesión se cancela o reprograma."
+    },
+    {
+     "id": "A3",
+     "condicion": "El usuario desactivó el canal de correo.",
+     "camino": "La notificación se entrega solo por push y en la aplicación, salvo que sea crítica."
+    },
+    {
+     "id": "A4",
+     "condicion": "El destinatario es un conjunto de tutores candidatos (P-06).",
+     "camino": "El sistema difunde de forma secuencial siguiendo el orden de prioridad, no de forma masiva simultánea."
+    },
+    {
+     "id": "A5",
+     "condicion": "El usuario no tiene la aplicación instalada.",
+     "camino": "El sistema omite el canal push y usa correo electrónico como canal principal."
+    }
+   ],
+   "excepciones": [
+    {
+     "id": "E1",
+     "excepcion": "EXT-04 no responde o devuelve error.",
+     "tratamiento": "El sistema reintenta hasta 3 veces con espera creciente; agotados los reintentos, registra el fallo y conserva la notificación en la bandeja de la aplicación (RF-M10-07)."
+    },
+    {
+     "id": "E2",
+     "excepcion": "El correo del destinatario rebota de forma permanente.",
+     "tratamiento": "El sistema marca la dirección como inválida, deja de usar ese canal y solicita al usuario actualizar su correo al siguiente inicio de sesión."
+    },
+    {
+     "id": "E3",
+     "excepcion": "El token de notificación push está vencido.",
+     "tratamiento": "El sistema lo invalida, lo elimina del registro del dispositivo y entrega por correo."
+    },
+    {
+     "id": "E4",
+     "excepcion": "La plantilla del evento no existe o está mal configurada.",
+     "tratamiento": "El sistema envía una notificación genérica con el enlace al detalle en la aplicación y registra el incidente para el administrador."
+    },
+    {
+     "id": "E5",
+     "excepcion": "Se detecta un volumen anómalo de notificaciones al mismo usuario.",
+     "tratamiento": "El sistema agrupa los eventos en un resumen único para evitar saturación, salvo los eventos críticos."
+    },
+    {
+     "id": "E6",
+     "excepcion": "El usuario fue suspendido o eliminado.",
+     "tratamiento": "El sistema cancela los envíos pendientes dirigidos a esa cuenta, excepto las comunicaciones sobre el estado de su propia cuenta."
+    }
+   ]
+  },
+  {
+   "id": "P-11",
+   "nombre": "Moderación y resolución de conflictos",
+   "objetivo": "Resolver los desacuerdos entre usuarios y mantener la calidad del contenido publicado, preservando la confianza en la plataforma.",
+   "actor": "ACT-01 Estudiante o ACT-02 Tutor",
+   "participantes": "ACT-03 Administrador, Sistema, EXT-01 Pasarela de pagos, EXT-04 Mensajería",
+   "disparador": "Un usuario abre una disputa sobre una sesión o reporta un comentario.",
+   "precondiciones": "Existe una sesión finalizada dentro de las últimas 48 horas (RN-09) o un contenido publicado reportable.",
+   "entradas": "Motivo del caso, evidencia aportada, historial de la sesión y del chat interno.",
+   "salidas": "Caso resuelto con ajuste de pago, sanción, eliminación de contenido o desestimación.",
+   "postcondiciones": "La decisión se aplica en P-09 si afecta dinero, y queda registrada en la bitácora de auditoría.",
+   "requerimientos": "RF-M11-02 a RF-M11-08, RF-M08-07, RN-09",
+   "diagrama": "flowchart TB\n  subgraph L1[\"ESTUDIANTE / TUTOR\"]\n    A1([\"Inicio · Abre una disputa<br/>o reporta un comentario\"])\n    A5[\"Aporta la evidencia<br/>solicitada\"]\n  end\n  subgraph L2[\"SISTEMA TutoresOn-Line\"]\n    B1{\"¿Dentro del plazo<br/>de 48 horas?\"}\n    B2[\"Crea el caso, suspende la liberación<br/>del pago y oculta el contenido\"]\n    B3[\"Recopila el historial de la sesión<br/>y el chat interno\"]\n    B7[\"Aplica la decisión: ajuste de pago,<br/>sanción o eliminación\"]\n    B8[\"Notifica a ambas partes y registra<br/>en la bitácora de auditoría\"]\n    B9[\"Rechaza el caso por<br/>plazo vencido\"]\n    F([\"Fin · Caso cerrado\"])\n  end\n  subgraph L3[\"ADMINISTRADOR\"]\n    C1[\"Revisa el caso y<br/>la evidencia\"]\n    C2{\"¿Requiere más<br/>información?\"}\n    C3{\"Decisión<br/>del caso\"}\n  end\n  A1 --> B1\n  B1 -- Sí --> B2\n  B1 -- No --> B9\n  B2 --> B3\n  B3 --> C1\n  C1 --> C2\n  C2 -- Sí --> A5\n  A5 --> C1\n  C2 -- No --> C3\n  C3 --> B7\n  B7 --> B8\n  B8 --> F\n  B9 --> F\n  classDef lane1 fill:#e8eef7,stroke:#3b5f8a,color:#1b2b3f;\n  classDef lane2 fill:#eef3ec,stroke:#5f8a4a,color:#1f3f1b;\n  classDef lane3 fill:#f3efe6,stroke:#a0895f,color:#3f2f1b;\n  class A1,A5 lane1;\n  class B2,B3,B7,B8,B9,F lane2;\n  class C1 lane3;",
+   "flujo": [
+    {
+     "n": 1,
+     "actor": "Estudiante o Tutor",
+     "accion": "Abre una disputa sobre una sesión realizada, indicando el motivo y adjuntando evidencia."
+    },
+    {
+     "n": 2,
+     "actor": "Sistema",
+     "accion": "Verifica que la solicitud se presente dentro de las 48 horas siguientes a la finalización de la sesión (RN-09)."
+    },
+    {
+     "n": 3,
+     "actor": "Sistema",
+     "accion": "Crea el caso, lo encola en el panel administrativo y suspende la liberación del pago asociado."
+    },
+    {
+     "n": 4,
+     "actor": "Sistema",
+     "accion": "Recopila automáticamente el historial de la sesión: horas de conexión, duración efectiva y chat interno."
+    },
+    {
+     "n": 5,
+     "actor": "Administrador",
+     "accion": "Revisa el caso, la evidencia aportada y el historial de ambas partes."
+    },
+    {
+     "n": 6,
+     "actor": "Administrador",
+     "accion": "Emite su decisión: a favor de una de las partes o de forma parcial."
+    },
+    {
+     "n": 7,
+     "actor": "Sistema",
+     "accion": "Aplica la decisión: ordena el ajuste de pago correspondiente en P-09 y, si procede, la sanción al usuario."
+    },
+    {
+     "n": 8,
+     "actor": "Sistema",
+     "accion": "Notifica a ambas partes el resultado y su motivo."
+    },
+    {
+     "n": 9,
+     "actor": "Sistema",
+     "accion": "Registra la decisión en la bitácora de auditoría inalterable y cierra el caso."
+    }
+   ],
+   "alternativos": [
+    {
+     "id": "A1",
+     "condicion": "El caso es el reporte de un comentario, no una disputa de dinero.",
+     "camino": "El comentario se oculta del perfil público mientras se revisa; el administrador puede aprobarlo, ocultarlo definitivamente o eliminarlo, y notifica su decisión al autor."
+    },
+    {
+     "id": "A2",
+     "condicion": "El administrador requiere más información.",
+     "camino": "Solicita evidencia adicional a una o ambas partes, con un plazo de respuesta; el caso queda en estado EN_ESPERA_EVIDENCIA."
+    },
+    {
+     "id": "A3",
+     "condicion": "Las partes llegan a un acuerdo antes de la decisión.",
+     "camino": "Quien abrió el caso puede retirarlo; el sistema reanuda la liberación del pago según el flujo normal de P-09."
+    },
+    {
+     "id": "A4",
+     "condicion": "El caso revela una falta grave de un usuario.",
+     "camino": "El administrador suspende la cuenta, registra el motivo y notifica al titular, además de resolver el caso económico."
+    },
+    {
+     "id": "A5",
+     "condicion": "El caso proviene de una alerta automática de reputación (A5 de P-08).",
+     "camino": "No hay contraparte reclamante: el administrador revisa el patrón de calificaciones y decide acompañamiento, advertencia o suspensión."
+    },
+    {
+     "id": "A6",
+     "condicion": "El caso corresponde a un desconocimiento de cargo ante el banco.",
+     "camino": "El administrador coordina con la pasarela la respuesta al contracargo y el saldo permanece congelado hasta su resolución."
+    }
+   ],
+   "excepciones": [
+    {
+     "id": "E1",
+     "excepcion": "La disputa se abre fuera del plazo de 48 horas.",
+     "tratamiento": "El sistema no crea el caso y explica el plazo. El usuario puede escribir a soporte, que lo evaluará por excepción."
+    },
+    {
+     "id": "E2",
+     "excepcion": "El pago ya fue liberado al tutor antes de abrirse la disputa.",
+     "tratamiento": "El caso se tramita igualmente; si la decisión favorece al estudiante, el ajuste se aplica sobre el saldo futuro del tutor o se gestiona como cobro."
+    },
+    {
+     "id": "E3",
+     "excepcion": "Una de las partes no responde a la solicitud de evidencia.",
+     "tratamiento": "Vencido el plazo, el administrador decide con la información disponible, dejando constancia de la falta de respuesta."
+    },
+    {
+     "id": "E4",
+     "excepcion": "Se abren varias disputas sobre la misma sesión.",
+     "tratamiento": "El sistema las consolida en un único caso con todas las evidencias, evitando decisiones contradictorias."
+    },
+    {
+     "id": "E5",
+     "excepcion": "El usuario reporta reiteradamente contenido sin fundamento.",
+     "tratamiento": "El sistema limita su capacidad de reportar y notifica al administrador el posible uso abusivo del mecanismo."
+    },
+    {
+     "id": "E6",
+     "excepcion": "El caso involucra una conducta que excede el ámbito de la plataforma.",
+     "tratamiento": "El administrador suspende las cuentas implicadas, conserva la evidencia y deriva el asunto fuera del sistema, dejando constancia en la bitácora."
+    },
+    {
+     "id": "E7",
+     "excepcion": "Falla el ajuste de pago ordenado por la decisión.",
+     "tratamiento": "El caso permanece abierto en estado PENDIENTE_AJUSTE y genera una alerta hasta que la operación financiera se complete."
+    }
+   ]
+  }
+ ]
+}

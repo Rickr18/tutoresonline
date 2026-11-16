@@ -4,7 +4,7 @@ import { Button, Card, Checkbox, Col, Flex, Form, Input, InputNumber, Row, Segme
 import { UploadOutlined } from '@ant-design/icons';
 import { api, type Modalidad, type Tutor } from '../../api';
 import { useSesion } from '../../sesion';
-import { Cabecera, useMaterias } from '../../comunes';
+import { Cabecera, useMaterias, useParametros } from '../../comunes';
 import { Alerta, Campo, Insignia, mensajeDe } from '../../ui';
 import { dinero, MODALIDAD, VERIFICACION } from '../../formato';
 import SolicitudesMateria from './SolicitudesMateria';
@@ -13,6 +13,7 @@ export default function Perfil() {
   const { usuario, refrescar, avisar } = useSesion();
   const t = usuario?.tutor;
   const materias = useMaterias();
+  const p = useParametros();
   const [bio, setBio] = useState(t?.bio ?? '');
   const [tarifa, setTarifa] = useState<number | null>(t?.tarifaHora || null);
   const [modalidad, setModalidad] = useState<Modalidad>(t?.modalidad ?? 'VIRTUAL');
@@ -59,7 +60,7 @@ export default function Perfil() {
             <Row gutter={14}>
               <Col xs={24} sm={12}>
                 <Campo etiqueta="Tarifa por hora (COP)" id="perfil-tarifa"
-                  ayuda={tarifa ? `Recibes ${dinero(tarifa * 0.85)} por hora después de la comisión del 15 %.` : 'Entre $10.000 y $500.000.'}>
+                  ayuda={tarifa ? `Recibes ${dinero(tarifa * (1 - p.COMISION_PCT / 100))} por hora después de la comisión del ${p.COMISION_PCT} %.` : 'Entre $10.000 y $500.000.'}>
                   <InputNumber id="perfil-tarifa" min={10000} max={500000} step={1000} value={tarifa} onChange={setTarifa} required style={{ width: '100%' }} />
                 </Campo>
               </Col>

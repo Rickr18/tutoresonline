@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, consulta, type Sesion, type Tutor } from '../api';
-import { Pantalla, useMaterias } from '../comunes';
+import { Pantalla, useMaterias, useParametros } from '../comunes';
 import { useNav } from '../nav';
 import { Alerta, Boton, Campo, FormularioPago, Opciones, Reloj, Segmentos, mensajeDe, useCuentaAtras, type DatosPago } from '../ui';
 import { C, e } from '../tema';
@@ -18,20 +18,23 @@ function Sello({ bien }: { bien: boolean }) {
   );
 }
 
-function Buscando({ s, avisados, alCancelar }: { s: Sesion; avisados?: number; alCancelar: () => void }) {
+/** Búsqueda por turnos (P-06): cada tutor tiene su turno y la búsqueda completa tiene un límite. */
+function Buscando({ s, alCancelar }: { s: Sesion; alCancelar: () => void }) {
   const cola = useQueryClient();
+  const p = useParametros();
   const resta = useCuentaAtras(s.expiraEn);
+  const b = s.busqueda;
   const cancelar = useMutation({
     mutationFn: () => api<Sesion>(`/sesiones/${s.id}/cancelar`, {}),
     onSuccess: () => { alCancelar(); cola.invalidateQueries({ queryKey: ['sesiones'] }); },
   });
   return (
     <View style={[e.tarjeta, { alignItems: 'center', paddingVertical: 28, gap: 14 }]}>
-      {s.expiraEn && <Reloj hasta={s.expiraEn} grande />}
+      {b?.turnoExpiraEn && <Reloj hasta={b.turnoExpiraEn} grande />}
       <Text style={[e.h2, { fontSize: 20, textAlign: 'center' }]}>{resta > 0 ? 'Buscando un tutor disponible' : 'Cerrando la búsqueda…'}</Text>
       <Text style={[e.tenue, { textAlign: 'center' }]}>
-        {avisados ? `Tu solicitud de ${s.materia.nombre} les llegó a ${avisados} ${avisados === 1 ? 'tutor' : 'tutores'} en línea. ` : `Tu solicitud de ${s.materia.nombre} les llegó a los tutores en línea. `}
-        El primero que acepte se queda con la sesión. Solo se cobra si alguien acepta.
+        {b ? `Le estamos ofreciendo tu solicitud de ${s.materia.nombre} al tutor ${b.candidato} de ${b.total}, en orden de calificación. ` : `Tu solicitud de ${s.materia.nombre} está en búsqueda. `}
+        Cada tutor tiene {p.TURNO_DEMANDA_S} segundos. La búsqueda termina en {Math.floor(resta / 60)}:{String(resta % 60).padStart(2, '0')} min; si nadie acepta o cancelas, se libera la retención del pago.
       </Text>
       {cancelar.isError && <Alerta>{mensajeDe(cancelar.error)}</Alerta>}
       <Boton texto="Cancelar la solicitud" variante="fantasma" cargando={cancelar.isPending} alPresionar={() => cancelar.mutate()} />
@@ -41,6 +44,7 @@ function Buscando({ s, avisados, alCancelar }: { s: Sesion; avisados?: number; a
 
 export default function Ahora() {
   const nav = useNav();
+  const p = useParametros();
   const cola = useQueryClient();
   const materias = useMaterias();
   const [materia, setMateria] = useState<number | ''>('');
@@ -72,13 +76,13 @@ export default function Ahora() {
 
   let cuerpo;
   if (abierta) {
-    cuerpo = <Buscando s={abierta} avisados={ultima?.id === abierta.id ? ultima.tutoresAvisados : undefined} alCancelar={() => setUltima(null)} />;
+    cuerpo = <Buscando s={abierta} alCancelar={() => setUltima(null)} />;
   } else if (actual && ['CONFIRMADA', 'EN_CURSO', 'FINALIZADA'].includes(actual.estado)) {
     cuerpo = (
       <View style={[e.tarjeta, { alignItems: 'center', paddingVertical: 28, gap: 12 }]}>
         <Sello bien />
         <Text style={[e.h2, { fontSize: 20, textAlign: 'center' }]}>{actual.tutor?.nombre} aceptó tu solicitud</Text>
-        <Text style={[e.tenue, { textAlign: 'center' }]}>Se cobraron {dinero(actual.precio)} por {duracion(actual.duracionMin)} de {actual.materia.nombre}.</Text>
+        <Text style={[e.tenue, { textAlign: 'center' }]}>El valor de la sesión es {dinero(actual.precio)} por {duracion(actual.duracionMin)} de {actual.materia.nombre}; la retención se ajustó a esa tarifa.</Text>
         <Boton texto="Ir a la sesión" alPresionar={() => nav.ir({ nombre: 'sesion', id: actual.id })} />
         <Boton texto="Pedir otra" variante="fantasma" chico alPresionar={() => setUltima(null)} />
       </View>
@@ -88,7 +92,7 @@ export default function Ahora() {
       <View style={[e.tarjeta, { alignItems: 'center', paddingVertical: 28, gap: 12 }]}>
         <Sello bien={false} />
         <Text style={[e.h2, { fontSize: 20, textAlign: 'center' }]}>Ningún tutor tomó la solicitud</Text>
-        <Text style={[e.tenue, { textAlign: 'center' }]}>No había tutores de {actual.materia.nombre} disponibles. No se hizo ningún cobro.</Text>
+        <Text style={[e.tenue, { textAlign: 'center' }]}>Ningún tutor de {actual.materia.nombre} aceptó a tiempo. Se liberó la retención: no se hizo ningún cobro. Puedes reservar una sesión programada.</Text>
         <Boton texto="Intentar de nuevo" alPresionar={() => setUltima(null)} />
         <Boton texto="Reservar con un tutor" variante="fantasma" chico alPresionar={() => nav.cambiarPestana('buscar')} />
       </View>
@@ -105,11 +109,11 @@ export default function Ahora() {
           </Text>
         )}
         <Segmentos etiqueta="Duración" valor={duracionMin} cambiar={setDuracionMin} opciones={[60, 90, 120].map((d) => ({ valor: d, texto: duracion(d) }))} />
-        <Campo etiqueta="¿Con qué necesitas ayuda?" value={tema} onChangeText={setTema} multiline maxLength={200}
+        <Campo etiqueta="¿Con qué necesitas ayuda?" value={tema} onChangeText={setTema} multiline maxLength={200} ayuda={`${tema.trim().length} de 20 caracteres mínimo.`}
           placeholder="Por ejemplo: no entiendo cómo plantear este ejercicio" />
         <FormularioPago valor={pago} cambiar={setPago} />
         <Alerta tono="info" titulo="Cómo funciona">
-          La solicitud llega a los tutores en línea de la materia y dura 45 segundos. El primero que acepte queda asignado y el cobro se hace en ese momento.
+          Antes de buscar se retiene el valor estimado. La solicitud se ofrece a los tutores en línea de la materia, uno por uno y en orden de calificación: cada uno tiene {p.TURNO_DEMANDA_S} segundos y la búsqueda dura máximo {p.BUSQUEDA_DEMANDA_MIN} minutos. Al aceptar, la retención se ajusta a la tarifa del tutor.
         </Alerta>
         {pedir.isError && <Alerta>{mensajeDe(pedir.error)}</Alerta>}
         <Boton texto="Buscar tutor ahora" cargando={pedir.isPending} deshabilitado={materia === ''} alPresionar={() => pedir.mutate()} />

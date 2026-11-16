@@ -3,27 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Card, Form, Input, Result, Segmented, Select, Typography } from 'antd';
 import { api, consulta, type Sesion, type Tutor } from '../../api';
-import { Cabecera, useMaterias } from '../../comunes';
+import { Cabecera, useMaterias, useParametros } from '../../comunes';
 import { Alerta, Campo, FormularioPago, Reloj, mensajeDe, useCuentaAtras, type DatosPago } from '../../ui';
 import { dinero, duracion } from '../../formato';
 
 const DURACIONES = [60, 90, 120];
 const buscando = (s: Sesion) => s.tipo === 'BAJO_DEMANDA' && s.estado === 'BUSCANDO_TUTOR';
 
-function Buscando({ s, avisados, alCancelar }: { s: Sesion; avisados?: number; alCancelar: () => void }) {
+/** Búsqueda por turnos (P-06): cada tutor tiene su turno y la búsqueda completa tiene un límite. */
+function Buscando({ s, alCancelar }: { s: Sesion; alCancelar: () => void }) {
   const cola = useQueryClient();
+  const p = useParametros();
   const resta = useCuentaAtras(s.expiraEn);
+  const b = s.busqueda;
   const cancelar = useMutation({
     mutationFn: () => api<Sesion>(`/sesiones/${s.id}/cancelar`, {}),
     onSuccess: () => { alCancelar(); cola.invalidateQueries({ queryKey: ['sesiones'] }); },
   });
   return (
     <Card className="busqueda">
-      <Result icon={s.expiraEn ? <Reloj hasta={s.expiraEn} gigante /> : undefined}
+      <Result icon={b?.turnoExpiraEn ? <Reloj hasta={b.turnoExpiraEn} total={p.TURNO_DEMANDA_S} gigante /> : undefined}
         title={resta > 0 ? 'Buscando un tutor disponible' : 'Cerrando la búsqueda…'}
         subTitle={<>
-          {avisados ? `Tu solicitud de ${s.materia.nombre} les llegó a ${avisados} ${avisados === 1 ? 'tutor' : 'tutores'} en línea. ` : `Tu solicitud de ${s.materia.nombre} les llegó a los tutores en línea. `}
-          El primero que acepte se queda con la sesión.<br />Solo se cobra si un tutor acepta.
+          {b ? `Le estamos ofreciendo tu solicitud de ${s.materia.nombre} al tutor ${b.candidato} de ${b.total}, en orden de calificación. ` : `Tu solicitud de ${s.materia.nombre} está en búsqueda. `}
+          Cada tutor tiene {p.TURNO_DEMANDA_S} segundos para aceptar; si no, pasa al siguiente.<br />
+          La búsqueda termina en {Math.floor(resta / 60)}:{String(resta % 60).padStart(2, '0')} min. Si nadie acepta o cancelas, se libera la retención del pago.
         </>}
         extra={<>
           {cancelar.isError && <Alerta>{mensajeDe(cancelar.error)}</Alerta>}
@@ -35,6 +39,7 @@ function Buscando({ s, avisados, alCancelar }: { s: Sesion; avisados?: number; a
 
 export default function Demanda() {
   const cola = useQueryClient();
+  const p = useParametros();
   const ir = useNavigate();
   const materias = useMaterias();
   const [materia, setMateria] = useState('');
@@ -72,12 +77,12 @@ export default function Demanda() {
 
   let cuerpo;
   if (abierta) {
-    cuerpo = <Buscando s={abierta} avisados={ultima?.id === abierta.id ? ultima.tutoresAvisados : undefined} alCancelar={() => setUltima(null)} />;
+    cuerpo = <Buscando s={abierta} alCancelar={() => setUltima(null)} />;
   } else if (actual && ['CONFIRMADA', 'EN_CURSO', 'FINALIZADA'].includes(actual.estado)) {
     cuerpo = (
       <Card className="busqueda">
         <Result status="success" title={`${actual.tutor?.nombre} aceptó tu solicitud`}
-          subTitle={`Se cobraron ${dinero(actual.precio)} por ${duracion(actual.duracionMin)} de ${actual.materia.nombre}. El pago queda retenido hasta 48 horas después de la sesión.`}
+          subTitle={`El valor de la sesión es ${dinero(actual.precio)} por ${duracion(actual.duracionMin)} de ${actual.materia.nombre}; la retención se ajustó a esa tarifa. El pago queda retenido hasta ${p.GARANTIA_H} horas después de la sesión.`}
           extra={[
             <Button key="ir" type="primary" onClick={() => ir(`/sesiones/${actual.id}`)}>Ir a la sesión</Button>,
             <Button key="otra" onClick={() => setUltima(null)}>Pedir otra</Button>,
@@ -88,10 +93,10 @@ export default function Demanda() {
     cuerpo = (
       <Card className="busqueda">
         <Result status="warning" title="Ningún tutor tomó la solicitud"
-          subTitle={`No había tutores de ${actual.materia.nombre} disponibles en este momento. No se hizo ningún cobro.`}
+          subTitle={`Ningún tutor de ${actual.materia.nombre} aceptó a tiempo. Se liberó la retención: no se hizo ningún cobro. Puedes reservar una sesión programada.`}
           extra={[
             <Button key="otra" type="primary" onClick={() => setUltima(null)}>Intentar de nuevo</Button>,
-            <Button key="buscar" onClick={() => ir('/buscar')}>Reservar con un tutor</Button>,
+            <Button key="buscar" onClick={() => ir(`/buscar?materia=${actual.materia.id}`)}>Reservar con un tutor</Button>,
           ]} />
       </Card>
     );
@@ -112,14 +117,15 @@ export default function Demanda() {
             <Segmented block value={duracionMin} onChange={(v) => setDuracionMin(Number(v))}
               options={DURACIONES.map((d) => ({ value: d, label: duracion(d) }))} />
           </Campo>
-          <Campo etiqueta="¿Con qué necesitas ayuda?" id="demanda-tema">
-            <Input.TextArea id="demanda-tema" value={tema} onChange={(e) => setTema(e.target.value)} required minLength={3} maxLength={200} autoSize={{ minRows: 2 }}
+          <Campo etiqueta="¿Con qué necesitas ayuda?" id="demanda-tema" ayuda="Al menos 20 caracteres, para que el tutor sepa si puede ayudarte.">
+            <Input.TextArea id="demanda-tema" value={tema} onChange={(e) => setTema(e.target.value)} required minLength={20} maxLength={200} showCount autoSize={{ minRows: 2 }}
               placeholder="Por ejemplo: no entiendo cómo plantear este ejercicio de integrales por partes" />
           </Campo>
           <FormularioPago valor={pago} cambiar={setPago} />
           <Alert type="info" showIcon title="Cómo funciona" description={<>
-            La solicitud se envía a los tutores en línea de la materia y dura 45 segundos. El primero que acepte queda asignado y abre la sala
-            virtual de inmediato. El cobro se hace en ese momento con la tarifa del tutor
+            Antes de buscar se retiene el valor estimado de la sesión. La solicitud se ofrece a los tutores en línea de la materia, uno por uno
+            y en orden de calificación: cada uno tiene {p.TURNO_DEMANDA_S} segundos y la búsqueda dura máximo {p.BUSQUEDA_DEMANDA_MIN} minutos. Cuando un tutor acepta,
+            se abre la sala virtual y la retención se ajusta a su tarifa
             {tarifas.length > 0 && (Math.min(...tarifas) === Math.max(...tarifas)
               ? `: ${costo(tarifas[0])} por ${duracion(duracionMin)}`
               : `: entre ${costo(Math.min(...tarifas))} y ${costo(Math.max(...tarifas))} por ${duracion(duracionMin)}`)}.

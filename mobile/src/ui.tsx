@@ -170,7 +170,7 @@ export function useCuentaAtras(hasta: string | null) {
   return hasta ? Math.max(0, Math.ceil((Date.parse(hasta) - ahora) / 1000)) : 0;
 }
 
-export function Reloj({ hasta, grande }: { hasta: string; grande?: boolean }) {
+export function Reloj({ hasta, grande }: { hasta: string; grande?: boolean; total?: number }) {
   const seg = useCuentaAtras(hasta);
   const lado = grande ? 120 : 54;
   const color = seg <= 10 ? C.rojo : C.verde;

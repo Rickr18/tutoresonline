@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { api, type Materia, type Sesion } from './api';
+import { api, type Materia, type Parametros, type Sesion } from './api';
 import { useSesion } from './sesion';
 import { useNav } from './nav';
 import { Avatar, Insignia } from './ui';
@@ -10,6 +10,19 @@ import { dinero, duracion, ESTADO_SESION, fechaHora } from './formato';
 
 export function useMaterias() {
   return useQuery({ queryKey: ['materias'], queryFn: () => api<Materia[]>('/materias'), staleTime: Infinity });
+}
+
+/** Valores iniciales del Corte 1, mientras llegan los vigentes del servidor (copia de web/src/comunes.tsx). */
+const PARAMETROS_INICIALES: Parametros = {
+  COMISION_PCT: 15, PLAZO_RESERVA_H: 12, TURNO_DEMANDA_S: 45, BUSQUEDA_DEMANDA_MIN: 5, GARANTIA_H: 48, PLAZO_DISPUTA_H: 48,
+  REEMBOLSO_TOTAL_H: 24, REEMBOLSO_PARCIAL_H: 2, REEMBOLSO_PARCIAL_PCT: 50, PUBLICACION_DIAS: 7, TOLERANCIA_MIN: 15,
+  RECORDATORIO_1_H: 24, RECORDATORIO_2_MIN: 15, UMBRAL_REPUTACION: 3, MIN_VALORACIONES: 10,
+};
+
+/** Parámetros del negocio vigentes (RF-M11-07): comisión, plazos y umbrales que muestran las pantallas. */
+export function useParametros(): Parametros {
+  const q = useQuery({ queryKey: ['parametros'], queryFn: () => api<Parametros>('/parametros'), staleTime: 60_000 });
+  return { ...PARAMETROS_INICIALES, ...q.data };
 }
 
 export function useSesiones() {

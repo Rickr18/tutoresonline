@@ -109,23 +109,27 @@ function vistaCaso(d: any) {
   const f = uno(`
     SELECT s.id AS sesion_id, m.nombre AS materia, p.monto, p.estado AS estado_pago, e.id AS e_id, e.nombre AS e_nombre,
            t.id AS t_id, t.nombre AS t_nombre, a.id AS a_id, a.nombre AS a_nombre, a.rol AS a_rol,
-           ep.nombre AS esc_nombre, rp.nombre AS res_nombre, rp.rol AS res_rol,
+           ep.nombre AS esc_nombre, rp.nombre AS res_nombre, rp.rol AS res_rol, au.nombre AS autor_nombre, au.rol AS autor_rol,
            (SELECT MAX(creado_en) FROM disputa_mensajes WHERE disputa_id = ?) AS ultimo_mensaje,
-           (SELECT COUNT(*) FROM disputa_mensajes WHERE disputa_id = ? AND canal = 'TUTOR' AND autor_id = s.tutor_id) AS descargos
+           (SELECT COUNT(*) FROM disputa_mensajes WHERE disputa_id = ? AND autor_id =
+              CASE WHEN ? = s.estudiante_id THEN s.tutor_id ELSE s.estudiante_id END) AS descargos
     FROM sesiones s JOIN materias m ON m.id = s.materia_id JOIN usuarios e ON e.id = s.estudiante_id
     JOIN usuarios t ON t.id = s.tutor_id LEFT JOIN pagos p ON p.sesion_id = s.id
     LEFT JOIN usuarios a ON a.id = ? LEFT JOIN usuarios ep ON ep.id = ? LEFT JOIN usuarios rp ON rp.id = ?
-    WHERE s.id = ?`, d.id, d.id, d.asignado_a, d.escalada_por, d.resuelta_por, d.sesion_id);
+    JOIN usuarios au ON au.id = ?
+    WHERE s.id = ?`, d.id, d.id, d.autor_id, d.asignado_a, d.escalada_por, d.resuelta_por, d.autor_id, d.sesion_id);
   return {
     id: d.id, estado: d.estado, motivo: d.motivo, creadoEn: d.creado_en,
     sesionId: f.sesion_id, materia: f.materia, monto: f.monto, estadoPago: f.estado_pago,
     estudiante: { id: f.e_id, nombre: f.e_nombre }, tutor: { id: f.t_id, nombre: f.t_nombre },
+    // Cualquiera de las dos partes puede abrir el caso (RF-M11-03); la otra presenta su versión.
+    autor: { id: d.autor_id, nombre: f.autor_nombre, rol: f.autor_rol },
     asignado: f.a_id ? { id: f.a_id, nombre: f.a_nombre, rol: f.a_rol } : null,
     escalada: d.escalada_en ? { por: f.esc_nombre, motivo: d.escalada_motivo, fecha: d.escalada_en } : null,
     sala: d.sala, salaCreadaEn: d.sala_creada_en,
     decision: d.decision, resolucion: d.resolucion, resueltaEn: d.resuelta_en,
     resueltaPor: f.res_nombre ? { nombre: f.res_nombre, rol: f.res_rol } : null,
-    tutorRespondio: f.descargos > 0,
+    contraparteRespondio: f.descargos > 0,
     ultimaActividad: [d.creado_en, f.ultimo_mensaje, d.escalada_en, d.resuelta_en].filter(Boolean).sort().pop(),
   };
 }
@@ -134,7 +138,7 @@ function vistaSesionEquipo(s: any, yo: Usuario) {
   const base = vistaSesion(s, yo);
   const correos = todos<{ id: number; email: string }>('SELECT id, email FROM usuarios WHERE id IN (?, ?)', s.estudiante_id, s.tutor_id ?? 0);
   const correo = (id: number | null) => correos.find((c) => c.id === id)?.email ?? null;
-  const califs = todos(`SELECT c.puntaje, c.comentario, c.publicada, c.creado_en, u.nombre AS autor, c.autor_id
+  const califs = todos(`SELECT c.id, c.puntaje, c.comentario, c.publicada, c.creado_en, c.moderacion, c.moderacion_motivo, u.nombre AS autor, c.autor_id
                         FROM calificaciones c JOIN usuarios u ON u.id = c.autor_id WHERE c.sesion_id = ?`, s.id);
   const disputa = uno('SELECT id, estado FROM disputas WHERE sesion_id = ?', s.id);
   const cancelo = s.cancelada_por ? uno<{ nombre: string }>('SELECT nombre FROM usuarios WHERE id = ?', s.cancelada_por)?.nombre : null;
@@ -154,8 +158,8 @@ function vistaSesionEquipo(s: any, yo: Usuario) {
       retrasoMin: s.iniciada_en && inicioProg && s.tipo === 'PROGRAMADA' ? Math.round((Date.parse(s.iniciada_en) - inicioProg) / MIN) : null,
     },
     calificaciones: califs.map((c) => ({
-      autor: c.autor, deEstudiante: c.autor_id === s.estudiante_id, puntaje: c.puntaje, comentario: c.comentario,
-      publicada: !!c.publicada, fecha: c.creado_en,
+      id: c.id, autor: c.autor, deEstudiante: c.autor_id === s.estudiante_id, puntaje: c.puntaje, comentario: c.comentario,
+      publicada: !!c.publicada, fecha: c.creado_en, moderacion: c.moderacion, motivoModeracion: c.moderacion_motivo,
     })),
     disputaId: disputa?.id ?? null,
     estadoDisputa: disputa?.estado ?? null,
@@ -200,7 +204,7 @@ export function montarCasos(api: Router) {
     const { s, d, canal } = casoDeParte(req);
     if (d.estado === 'RESUELTA') throw new ErrorHttp(409, 'El caso ya se resolvió.');
     tx(() => {
-      const primero = canal === 'TUTOR' && !uno('SELECT 1 AS x FROM disputa_mensajes WHERE disputa_id = ? AND autor_id = ?', d.id, req.yo.id);
+      const primero = req.yo.id !== d.autor_id && !uno('SELECT 1 AS x FROM disputa_mensajes WHERE disputa_id = ? AND autor_id = ?', d.id, req.yo.id);
       const archivo = guardarMensaje(d, canal, req.yo, req.body);
       if (primero) registrar(s.id, 'DESCARGO', `${req.yo.nombre} presentó su versión del caso.`, req.yo.id);
       if (archivo) registrar(s.id, 'PRUEBA_ADJUNTA', `${req.yo.nombre} adjuntó una prueba: ${archivo}.`, req.yo.id);

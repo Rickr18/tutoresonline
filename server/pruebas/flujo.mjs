@@ -53,6 +53,10 @@ check('franjas libres', fr.d.length > 5, JSON.stringify(fr.d).slice(0, 200));
 console.log('   primera franja', fr.d[0], 'total', fr.d.length);
 
 // Reserva programada
+r = await api('GET', `/tutores/${idCarlos}/cotizacion?duracionMin=90`, ana.token);
+check('RF-M05-03 desglose antes de reservar', r.d.subtotal === 52500 && r.d.comisionPct === 15 && r.d.comision === 7875 && r.d.netoTutor === 44625 && r.d.impuestos === 0 && r.d.total === 52500, JSON.stringify(r.d));
+r = await api('POST', '/sesiones', ana.token, { tutorId: idCarlos, materiaId: 1, inicio: fr.d[0], duracionMin: 60, modalidad: 'VIRTUAL', tema: 'Derivadas', pago: tarjeta });
+check('RF-M05-02 tema de menos de 20 caracteres 400', r.s === 400 && /20 caracteres/.test(r.d.error), JSON.stringify(r));
 r = await api('POST', '/sesiones', ana.token, { tutorId: idCarlos, materiaId: 1, inicio: fr.d[0], duracionMin: 60, modalidad: 'VIRTUAL', tema: 'Derivadas por regla de la cadena', pago: { metodo: 'TARJETA', numero: '4111111111110000' } });
 check('tarjeta 0000 rechazada 402', r.s === 402, JSON.stringify(r));
 r = await api('POST', '/sesiones', carlos.token, { tutorId: idCarlos, materiaId: 1, inicio: fr.d[0], duracionMin: 60, modalidad: 'VIRTUAL', tema: 'Derivadas por regla de la cadena', pago: tarjeta });
@@ -60,8 +64,10 @@ check('tutor no puede reservar (403)', r.s === 403, JSON.stringify(r));
 r = await api('POST', '/sesiones', ana.token, { tutorId: idCarlos, materiaId: 1, inicio: fr.d[0], duracionMin: 60, modalidad: 'VIRTUAL', tema: 'Derivadas por regla de la cadena', pago: tarjeta });
 check('reserva creada PENDIENTE_ACEPTACION', r.d?.estado === 'PENDIENTE_ACEPTACION' && r.d.pago?.estado === 'RETENIDO' && r.d.pago.monto === 35000 && r.d.pago.comision === 5250, JSON.stringify(r));
 const s1 = r.d.id;
-r = await api('POST', '/sesiones', luis.token, { tutorId: idCarlos, materiaId: 1, inicio: fr.d[0], duracionMin: 60, modalidad: 'VIRTUAL', tema: 'Otra sesión misma hora', pago: tarjeta });
+r = await api('POST', '/sesiones', luis.token, { tutorId: idCarlos, materiaId: 1, inicio: fr.d[0], duracionMin: 60, modalidad: 'VIRTUAL', tema: 'Otra sesión a la misma hora del día', pago: tarjeta });
 check('franja ocupada 409', r.s === 409, JSON.stringify(r));
+r = await api('POST', '/sesiones', ana.token, { tutorId: laura.usuario.id, materiaId: 10, inicio: fr.d[0], duracionMin: 60, modalidad: 'VIRTUAL', tema: 'Conversación para una entrevista', pago: tarjeta });
+check('RF-M05-08 el estudiante no reserva dos sesiones cruzadas', r.s === 409 && r.d.error.includes(`#${s1}`), JSON.stringify(r));
 r = await api('GET', `/sesiones/${s1}`, luis.token);
 check('sesión ajena 403/404', r.s === 403 || r.s === 404, r.s);
 r = await api('GET', `/sesiones/${s1}`, carlos.token);
@@ -70,9 +76,29 @@ r = await api('POST', `/sesiones/${s1}/aceptar`, carlos.token);
 check('aceptar -> CONFIRMADA con enlace', r.d?.estado === 'CONFIRMADA' && /jit\.si/.test(r.d.enlace || ''), JSON.stringify(r));
 r = await api('POST', `/sesiones/${s1}/calificar`, ana.token, { puntaje: 5, comentario: 'x' });
 check('RN-07 no se califica sin finalizar', r.s >= 400, JSON.stringify(r));
-r = await api('POST', `/sesiones/${s1}/iniciar`, carlos.token);
-check('iniciar (modo demo) -> EN_CURSO', r.d?.estado === 'EN_CURSO', JSON.stringify(r));
-r = await api('POST', `/sesiones/${s1}/finalizar`, carlos.token);
+// Reprogramación (RF-M05-07): una parte propone, la otra acepta o rechaza
+r = await api('GET', `/sesiones/${s1}`, ana.token);
+check('las dos partes pueden proponer otra fecha', r.d.acciones.includes('reprogramar'), JSON.stringify(r.d.acciones));
+r = await api('POST', `/sesiones/${s1}/reprogramar`, ana.token, { inicio: fr.d[1] });
+check('el estudiante propone otra fecha', r.s === 200 && r.d.reprogramacion?.mia && r.d.inicio === fr.d[0], JSON.stringify(r.d.reprogramacion));
+r = await api('GET', `/sesiones/${s1}`, carlos.token);
+check('el tutor ve la propuesta para responder', r.d.acciones.includes('responder-reprogramacion') && r.d.reprogramacion.propuestaPor.nombre === 'Ana Martínez', JSON.stringify(r.d.acciones));
+r = await api('POST', `/sesiones/${s1}/reprogramacion`, carlos.token, { aceptar: false });
+check('el tutor rechaza y la fecha no cambia', r.s === 200 && !r.d.reprogramacion && r.d.inicio === fr.d[0], JSON.stringify(r.d));
+await api('POST', `/sesiones/${s1}/reprogramar`, carlos.token, { inicio: fr.d[1] });
+r = await api('POST', `/sesiones/${s1}/reprogramacion`, ana.token, { aceptar: true });
+check('el estudiante acepta la propuesta del tutor', r.s === 200 && r.d.inicio === fr.d[1] && r.d.pago.estado === 'RETENIDO', JSON.stringify(r.d));
+r = await api('GET', `/sesiones/${s1}`, ana.token);
+check('no se reporta inasistencia antes de la tolerancia', !r.d.acciones.includes('inasistencia'), JSON.stringify(r.d.acciones));
+// Corte 2: cuando las dos partes entran a la sala, la sesión pasa sola a En curso
+r = await api('POST', `/sesiones/${s1}/sala`, ana.token, {});
+r = await api('GET', `/sesiones/${s1}`, ana.token);
+check('con una sola parte en la sala sigue confirmada', r.d.estado === 'CONFIRMADA', r.d.estado);
+await api('POST', `/sesiones/${s1}/sala`, carlos.token, {});
+r = await api('GET', `/sesiones/${s1}`, ana.token);
+check('con las dos partes en la sala pasa a EN_CURSO', r.d.estado === 'EN_CURSO' && !!r.d.iniciadaEn, JSON.stringify(r.d));
+check('RF-M07-04 el estudiante también puede finalizar', r.d.acciones.includes('finalizar'), JSON.stringify(r.d.acciones));
+r = await api('POST', `/sesiones/${s1}/finalizar`, ana.token);
 check('finalizar -> FINALIZADA, liberarEn', r.d?.estado === 'FINALIZADA' && !!r.d.pago.liberarEn, JSON.stringify(r));
 r = await api('POST', `/sesiones/${s1}/calificar`, ana.token, { puntaje: 5, comentario: 'Explica muy claro.' });
 check('califica estudiante', r.s === 200 && r.d.miCalificacion?.puntaje === 5, JSON.stringify(r));
@@ -82,6 +108,11 @@ r = await api('POST', `/sesiones/${s1}/calificar`, ana.token, { puntaje: 4, come
 check('no calificar dos veces', r.s >= 400, JSON.stringify(r));
 r = await api('POST', `/sesiones/${s1}/calificar`, carlos.token, { puntaje: 5, comentario: 'Muy atenta.' });
 check('califica tutor y ve la recibida', r.d?.calificacionRecibida?.puntaje === 5, JSON.stringify(r.d?.calificacionRecibida));
+check('RF-M08-07 quien recibe el comentario lo puede reportar', r.d.acciones.includes('reportar'), JSON.stringify(r.d.acciones));
+r = await api('POST', `/sesiones/${s1}/calificacion/reportar`, carlos.token, { motivo: 'El comentario no corresponde a lo que pasó.' });
+check('reportar oculta el comentario', r.s === 200 && r.d.calificacionRecibida.moderacion === 'REPORTADA' && !r.d.acciones.includes('reportar'), JSON.stringify(r.d.calificacionRecibida));
+r = await api('GET', `/tutores/${idCarlos}`, luis.token);
+check('el comentario reportado no se ve en el perfil', !r.d.resenas.some(x => x.comentario === 'Explica muy claro.'), JSON.stringify(r.d.resenas.slice(0, 2)));
 r = await api('POST', `/sesiones/${s1}/disputa`, ana.token, { motivo: 'La sesión duró menos de lo pactado.' });
 check('disputa abierta, pago EN_DISPUTA', r.d?.pago?.estado === 'EN_DISPUTA' && r.d.disputa, JSON.stringify(r));
 // Caso de soporte: canales separados, pruebas, sala de mediación, escalamiento y resolución
@@ -135,7 +166,7 @@ r = await api('POST', `/sesiones/${s1}/disputa/mensajes`, carlos.token, { texto:
 check('no se escribe en un caso resuelto', r.s === 409, JSON.stringify(r));
 r = await api('GET', `/sesiones/${s1}/historial`, ana.token);
 const tipos = r.d.map(e => e.tipo);
-check('historial público con hora exacta', ['SESION_CREADA', 'PAGO_COBRADO', 'ACEPTADA', 'INICIADA', 'FINALIZADA', 'DISPUTA_ABIERTA', 'DESCARGO', 'CASO_RESUELTO'].every(t => tipos.includes(t)), JSON.stringify(tipos));
+check('historial público con hora exacta', ['SESION_CREADA', 'PAGO_COBRADO', 'ACEPTADA', 'REPROGRAMACION_PROPUESTA', 'REPROGRAMADA', 'INICIADA', 'FINALIZADA', 'DISPUTA_ABIERTA', 'DESCARGO', 'CASO_RESUELTO'].every(t => tipos.includes(t)), JSON.stringify(tipos));
 check('el estudiante no ve el escalamiento interno', !tipos.includes('CASO_ESCALADO'));
 r = await api('GET', `/gestion/sesiones/${s1}`, soporte.token);
 check('soporte ve el historial completo', r.d.eventos.some(e => e.tipo === 'CASO_ESCALADO' && e.interno), JSON.stringify(r.d.eventos.map(e => e.tipo)));
@@ -149,37 +180,93 @@ check('reserva 90 min presencial', r.d?.precio === 52500 && r.d.reembolsoSiCance
 const s2 = r.d.id;
 r = await api('POST', `/sesiones/${s2}/cancelar`, luis.token);
 check('cancelar -> reembolso 100%', r.d?.estado === 'CANCELADA' && r.d.pago.reembolso === 52500, JSON.stringify(r));
-// Rechazo del tutor
-r = await api('POST', '/sesiones', luis.token, { tutorId: idCarlos, materiaId: 2, inicio: lejos, duracionMin: 60, modalidad: 'VIRTUAL', tema: 'Integrales definidas', pago: { metodo: 'PSE', numero: '1234567' } });
+// Rechazo del tutor: se devuelve todo y se sugieren otros tutores de la materia (A1 de P-04)
+r = await api('POST', '/sesiones', luis.token, { tutorId: idCarlos, materiaId: 1, inicio: lejos, duracionMin: 60, modalidad: 'VIRTUAL', tema: 'Límites y continuidad', pago: { metodo: 'PSE', numero: '1234567' } });
 const s3 = r.d.id;
 r = await api('POST', `/sesiones/${s3}/rechazar`, carlos.token);
 check('rechazar -> CANCELADA con reembolso', r.d?.estado === 'CANCELADA' && r.d.pago.estado === 'REEMBOLSADO', JSON.stringify(r));
+r = await api('GET', `/sesiones/${s3}`, luis.token);
+check('el estudiante recibe tutores sugeridos', r.d.sugerencias.length > 0 && r.d.sugerencias.every(t => t.id !== idCarlos), JSON.stringify(r.d.sugerencias));
 
-// Bajo demanda: carrera entre dos tutores (materia 1: Carlos en línea, Andrés)
+// Bajo demanda por turnos (P-06): Carlos y Andrés dictan Cálculo diferencial y están en línea
 await api('POST', '/tutor/en-linea', andres.token, { enLinea: true });
 r = await api('POST', '/sesiones/demanda', ana.token, { materiaId: 1, duracionMin: 60, tema: 'Tengo parcial mañana de límites', pago: tarjeta });
-check('demanda BUSCANDO_TUTOR, 2 avisados', r.d?.estado === 'BUSCANDO_TUTOR' && r.d.tutoresAvisados === 2, JSON.stringify(r));
+check('demanda BUSCANDO_TUTOR con turno para el primer candidato de 2', r.d?.estado === 'BUSCANDO_TUTOR' && r.d.busqueda?.candidato === 1 && r.d.busqueda.total === 2, JSON.stringify(r.d));
+check('RF-M06-07 el pago se retiene antes de buscar (valor estimado)', r.d.pago?.estado === 'RETENIDO' && r.d.pago.monto === 35000, JSON.stringify(r.d.pago));
 const d1 = r.d.id;
+const limite = Date.parse(r.d.expiraEn) - Date.now();
+check('límite global de 5 minutos', limite > 280e3 && limite <= 300e3, limite);
 r = await api('GET', '/demanda/abiertas', carlos.token);
-check('tutor ve solicitud abierta', r.d.some(x => x.id === d1), JSON.stringify(r.d));
+const turno = r.d.find(x => x.id === d1);
+check('el mejor calificado tiene el turno de 45 s', !!turno && Date.parse(turno.expiraEn) - Date.now() <= 45e3, JSON.stringify(r.d));
+r = await api('GET', '/demanda/abiertas', andres.token);
+check('el segundo candidato todavía no la ve', !r.d.some(x => x.id === d1), JSON.stringify(r.d));
 r = await api('GET', '/demanda/abiertas', laura.token);
 check('tutor de otra materia no la ve', !r.d.some(x => x.id === d1), JSON.stringify(r.d));
 const [a, b] = await Promise.all([api('POST', `/sesiones/${d1}/aceptar`, carlos.token), api('POST', `/sesiones/${d1}/aceptar`, andres.token)]);
-check('RN-04 solo uno gana', [a.s, b.s].sort().join() === '200,409', `${a.s} ${b.s} ${JSON.stringify(b.d)}`);
+check('RN-04 solo uno gana', [a.s, b.s].sort().join() === '200,409' && a.s === 200, `${a.s} ${b.s} ${JSON.stringify(b.d)}`);
 r = await api('GET', `/sesiones/${d1}`, ana.token);
-check('demanda CONFIRMADA y cobrada', r.d.estado === 'CONFIRMADA' && r.d.pago?.estado === 'RETENIDO' && [35000, 28000].includes(r.d.pago.monto), JSON.stringify(r.d));
+check('demanda CONFIRMADA y cobrada', r.d.estado === 'CONFIRMADA' && r.d.pago?.estado === 'RETENIDO' && r.d.pago.monto === 35000, JSON.stringify(r.d));
 r = await api('POST', `/sesiones/${d1}/aceptar`, laura.token);
 check('tutor no elegible no acepta', r.s >= 400, JSON.stringify(r));
+r = await api('GET', `/gestion/sesiones/${d1}`, soporte.token);
+check('el orden de difusión queda en el historial interno', r.d.eventos.some(e => e.tipo === 'TURNO' && e.interno && e.texto.includes('Carlos')), JSON.stringify(r.d.eventos.map(e => e.tipo)));
 
-// Demanda rechazada por todos / expiración
+// A1 de P-06: el primero pasa y la solicitud sigue con el siguiente; la retención se ajusta a la tarifa de quien acepta
+r = await api('POST', '/sesiones/demanda', luis.token, { materiaId: 1, duracionMin: 60, tema: 'Derivadas implícitas para el quiz', pago: tarjeta });
+const d3 = r.d.id;
+r = await api('POST', `/sesiones/${d3}/rechazar`, andres.token);
+check('solo el tutor en turno puede pasar', r.s === 409, JSON.stringify(r));
+r = await api('POST', `/sesiones/${d3}/rechazar`, carlos.token);
+check('el tutor en turno pasa', r.s === 200, JSON.stringify(r));
+r = await api('GET', `/sesiones/${d3}`, luis.token);
+check('el turno pasa al segundo candidato', r.d.estado === 'BUSCANDO_TUTOR' && r.d.busqueda.candidato === 2, JSON.stringify(r.d.busqueda));
+r = await api('POST', `/sesiones/${d3}/aceptar`, andres.token);
+check('el segundo acepta y la retención se ajusta a su tarifa', r.s === 200 && r.d.estado === 'CONFIRMADA' && r.d.pago.monto === 28000, JSON.stringify(r.d.pago));
+
+// A4 de P-06: cancelar mientras se busca libera toda la retención
+r = await api('POST', '/sesiones/demanda', luis.token, { materiaId: 2, duracionMin: 60, tema: 'Integrales por fracciones parciales', pago: tarjeta });
+check('E4 de P-04 no se pide tutor si se cruza con otra sesión', r.s === 409 && /se cruza/.test(r.d.error), JSON.stringify(r));
+r = await api('POST', `/sesiones/${d3}/cancelar`, luis.token);
+r = await api('POST', '/sesiones/demanda', luis.token, { materiaId: 2, duracionMin: 60, tema: 'Integrales por fracciones parciales', pago: tarjeta });
+const d4 = r.d.id;
+r = await api('POST', `/sesiones/${d4}/cancelar`, luis.token);
+check('cancelar la búsqueda libera la retención', r.d.estado === 'CANCELADA' && r.d.pago.estado === 'REEMBOLSADO' && r.d.pago.reembolso === r.d.pago.monto, JSON.stringify(r.d));
+
+// Ejecución de la sesión inmediata: el tutor la inicia y la finaliza; el filtro retiene el comentario con datos personales
+r = await api('POST', `/sesiones/${d1}/iniciar`, carlos.token);
+check('iniciar (modo demo) -> EN_CURSO', r.d?.estado === 'EN_CURSO', JSON.stringify(r));
+r = await api('POST', `/sesiones/${d1}/finalizar`, carlos.token);
+check('el tutor finaliza', r.d?.estado === 'FINALIZADA', JSON.stringify(r.d?.estado));
+r = await api('POST', `/sesiones/${d1}/calificar`, ana.token, { puntaje: 4, comentario: 'Buena clase. Escríbanme al 300 123 4567 si quieren saber más.' });
+check('E2 de P-08 el filtro retiene datos personales', r.s === 200 && r.d.miCalificacion.moderacion === 'RETENIDA' && /teléfono/.test(r.d.comentarioRetenido), JSON.stringify(r.d.miCalificacion));
+r = await api('POST', `/sesiones/${d1}/disputa`, carlos.token, { motivo: 'La estudiante se desconectó a la mitad y luego pidió reembolso por chat.' });
+check('RF-M11-03 el tutor también abre una disputa', r.s === 200 && r.d.disputa?.autor.rol === 'TUTOR' && r.d.pago.estado === 'EN_DISPUTA', JSON.stringify(r.d.disputa));
+r = await api('GET', '/gestion/disputas', soporte.token);
+check('soporte ve quién abrió el caso', r.d.find(c => c.sesionId === d1)?.autor.nombre === 'Carlos Mendoza', JSON.stringify(r.d[0]));
+
+// Demanda con un solo candidato que pasa, y sin tutores en línea
 r = await api('POST', '/sesiones/demanda', luis.token, { materiaId: 10, duracionMin: 60, tema: 'Conversación para entrevista', pago: tarjeta });
-const d2 = r.d.id; check('demanda inglés avisada a 1', r.d.tutoresAvisados === 1, JSON.stringify(r.d.tutoresAvisados));
+const d2 = r.d.id; check('demanda inglés con un candidato', r.d.busqueda?.total === 1, JSON.stringify(r.d.busqueda));
 r = await api('POST', `/sesiones/${d2}/rechazar`, laura.token);
 check('descartar demanda', r.s === 200, JSON.stringify(r));
 r = await api('GET', `/sesiones/${d2}`, luis.token);
-console.log('   tras descarte único:', r.d.estado);
+check('sin más candidatos -> SIN_TUTOR y retención liberada', r.d.estado === 'SIN_TUTOR' && r.d.pago.estado === 'REEMBOLSADO' && r.d.sugerencias.length >= 0, JSON.stringify(r.d));
 r = await api('POST', '/sesiones/demanda', luis.token, { materiaId: 6, duracionMin: 60, tema: 'Estequiometría urgente', pago: tarjeta });
-check('sin tutores en línea -> SIN_TUTOR', r.d?.estado === 'SIN_TUTOR', JSON.stringify(r.d?.estado));
+check('sin tutores en línea -> SIN_TUTOR sin cobro', r.d?.estado === 'SIN_TUTOR' && !r.d.pago, JSON.stringify(r.d));
+
+// Moderación de comentarios (RF-M11-05)
+r = await api('GET', '/gestion/moderacion', soporte.token);
+check('soporte ve los comentarios por moderar', r.d.pendientes.length === 4 && r.d.pendientes.some(c => c.moderacion === 'RETENIDA') && r.d.pendientes.some(c => c.moderacion === 'REPORTADA'), JSON.stringify(r.d.pendientes.map(c => c.moderacion)));
+check('estudiante no entra a moderación', (await api('GET', '/gestion/moderacion', ana.token)).s === 403);
+const reportado = r.d.pendientes.find(c => c.sesionId === s1);
+r = await api('POST', `/gestion/moderacion/${reportado.id}`, soporte.token, { decision: 'APROBAR', motivo: 'El comentario es una opinión válida.' });
+check('soporte aprueba el comentario reportado', r.s === 200 && r.d.moderacion === 'VISIBLE' && r.d.moderadaPor.nombre === 'Marcela Ruiz', JSON.stringify(r.d));
+r = await api('GET', '/notificaciones', ana.token);
+check('el autor recibe la decisión con el motivo', r.d.lista.some(n => n.titulo === 'Revisamos tu comentario' && n.cuerpo.includes('opinión válida')), JSON.stringify(r.d.lista[0]));
+const retenido = (await api('GET', '/gestion/moderacion', soporte.token)).d.pendientes.find(c => c.sesionId === d1);
+r = await api('POST', `/gestion/moderacion/${retenido.id}`, soporte.token, { decision: 'OCULTAR', motivo: 'Incluye un número de teléfono.' });
+check('soporte oculta el comentario retenido', r.d.moderacion === 'OCULTA', JSON.stringify(r.d));
 
 // Tutor: perfil, disponibilidad, ingresos
 r = await api('GET', '/tutor/ingresos', carlos.token);
@@ -274,7 +361,7 @@ r = await api('GET', '/materias', ana.token); check('la materia nueva aparece', 
 r = await api('PATCH', `/admin/materias/${idTermo}`, admin.token, { activa: false });
 check('desactivar materia', r.s === 200 && r.d.activa === false, JSON.stringify(r));
 r = await api('GET', '/materias', ana.token); check('la materia desactivada no aparece', !r.d.some(m => m.id === idTermo));
-r = await api('POST', '/sesiones/demanda', ana.token, { materiaId: idTermo, duracionMin: 60, tema: 'Primera ley', pago: tarjeta });
+r = await api('POST', '/sesiones/demanda', ana.token, { materiaId: idTermo, duracionMin: 60, tema: 'Primera ley de la termodinámica', pago: tarjeta });
 check('no se pide tutor de una materia inactiva', r.s === 400, JSON.stringify(r));
 
 // Exportar y bitácora
@@ -331,5 +418,25 @@ r = await api('GET', '/tutor/solicitudes-materia', paola.token);
 check('el tutor ve el estado y la respuesta', r.d.find(s => s.id === idFinanzas)?.respuesta?.includes('académico'), JSON.stringify(r.d));
 r = await api('GET', '/admin/auditoria', admin.token);
 check('la bitácora registra las solicitudes', ['SOLICITUD_APROBADA', 'SOLICITUD_RECHAZADA'].every(a => r.d.some(x => x.accion === a)));
+
+// Parámetros del negocio versionados (RF-M11-07)
+r = await api('GET', '/admin/parametros', admin.token);
+check('el admin ve los parámetros con su regla', r.s === 200 && r.d.find(p => p.clave === 'COMISION_PCT')?.valor === 15 && r.d.every(p => p.historial.length >= 1), JSON.stringify(r.d[0]).slice(0, 200));
+const manana = new Date(Date.now() + 86400e3).toISOString();
+r = await api('POST', '/admin/parametros/COMISION_PCT', admin.token, { valor: 18, vigenteDesde: manana, motivo: 'Ajuste aprobado para el próximo mes.' });
+check('cambio programado a futuro', r.s === 201, JSON.stringify(r));
+r = await api('GET', '/parametros');
+check('el valor vigente no cambia antes de la fecha', r.d.COMISION_PCT === 15, JSON.stringify(r.d));
+r = await api('GET', '/admin/parametros', admin.token);
+check('el cambio aparece como próximo', r.d.find(p => p.clave === 'COMISION_PCT').proximo?.valor === 18, JSON.stringify(r.d.find(p => p.clave === 'COMISION_PCT').proximo));
+r = await api('POST', '/admin/parametros/REEMBOLSO_PARCIAL_PCT', admin.token, { valor: 40, motivo: 'Prueba de cambio inmediato.' });
+r = await api('GET', '/parametros');
+check('un cambio sin fecha rige de inmediato', r.d.REEMBOLSO_PARCIAL_PCT === 40, JSON.stringify(r.d));
+await api('POST', '/admin/parametros/REEMBOLSO_PARCIAL_PCT', admin.token, { valor: 50, motivo: 'Se vuelve al valor del Corte 1.' });
+r = await api('POST', '/admin/parametros/TURNO_DEMANDA_S', admin.token, { valor: 5, motivo: 'Fuera del rango permitido.' });
+check('valor fuera de rango 400', r.s === 400, JSON.stringify(r));
+check('soporte no cambia parámetros', (await api('POST', '/admin/parametros/COMISION_PCT', soporte.token, { valor: 10, motivo: 'No debería poder.' })).s === 403);
+r = await api('GET', '/admin/auditoria', admin.token);
+check('la bitácora registra los cambios de parámetros y la moderación', ['PARAMETRO_CAMBIADO', 'COMENTARIO_MODERADO'].every(a => r.d.some(x => x.accion === a)), JSON.stringify(r.d.slice(0, 3)));
 console.log(`\n${ok} correctas, ${mal} fallas`);
 process.exit(mal ? 1 : 0);

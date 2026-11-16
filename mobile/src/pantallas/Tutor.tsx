@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type Sesion, type Tutor as TTutor } from '../api';
-import { Pantalla } from '../comunes';
+import { api, type Cotizacion, type Sesion, type Tutor as TTutor } from '../api';
+import { Pantalla, useParametros } from '../comunes';
 import { useNav } from '../nav';
 import { useSesion } from '../sesion';
 import { Alerta, Avatar, Boton, Campo, Cargando, DatosLista, Estrellas, FormularioPago, Hoja, Opciones, Segmentos, mensajeDe, type DatosPago } from '../ui';
@@ -18,14 +18,21 @@ function Reserva({ tutor, inicio, cerrar }: { tutor: TTutor; inicio: string; cer
   const [modalidad, setModalidad] = useState<'VIRTUAL' | 'PRESENCIAL'>(tutor.modalidad === 'PRESENCIAL' ? 'PRESENCIAL' : 'VIRTUAL');
   const [tema, setTema] = useState('');
   const [pago, setPago] = useState<DatosPago>({ metodo: 'TARJETA', numero: '' });
-  const total = Math.round((tutor.tarifaHora * duracionMin) / 60);
+  const p = useParametros();
+  // RF-M05-03: el servidor calcula el desglose (tarifa, duración, comisión e impuestos) antes de confirmar.
+  const cotizacion = useQuery({
+    queryKey: ['franjas', 'cotizacion', tutor.id, duracionMin],
+    queryFn: () => api<Cotizacion>(`/tutores/${tutor.id}/cotizacion?duracionMin=${duracionMin}`),
+  });
+  const c = cotizacion.data;
+  const total = c?.total ?? Math.round((tutor.tarifaHora * duracionMin) / 60);
 
   const reservar = useMutation({
     mutationFn: () => api<Sesion>('/sesiones', { tutorId: tutor.id, materiaId, inicio, duracionMin, modalidad, tema: tema.trim(), pago }),
     onSuccess: (s) => {
       cola.invalidateQueries({ queryKey: ['sesiones'] });
       cola.invalidateQueries({ queryKey: ['franjas'] });
-      avisar('Reserva enviada', 'bien', `${tutor.nombre} tiene 12 horas para aceptarla.`);
+      avisar('Reserva enviada', 'bien', `${tutor.nombre} tiene ${p.PLAZO_RESERVA_H} horas para aceptarla.`);
       cerrar();
       nav.reemplazar({ nombre: 'sesion', id: s.id });
     },
@@ -44,13 +51,16 @@ function Reserva({ tutor, inicio, cerrar }: { tutor: TTutor; inicio: string; cer
           opciones={[{ valor: 'VIRTUAL', texto: 'Virtual' }, { valor: 'PRESENCIAL', texto: 'Presencial' }]} />
       )}
       <Campo etiqueta="Tema que quieres trabajar" value={tema} onChangeText={setTema} multiline maxLength={200}
+        ayuda={`${tema.trim().length} de 20 caracteres mínimo, para que el tutor pueda decidir.`}
         placeholder="Por ejemplo: derivadas por regla de la cadena" />
       <FormularioPago valor={pago} cambiar={setPago} />
       <DatosLista filas={[
-        { dt: `${dinero(tutor.tarifaHora)} por hora × ${duracion(duracionMin)}`, dd: dinero(total) },
+        { dt: `${dinero(tutor.tarifaHora)} por hora × ${duracion(duracionMin)}`, dd: dinero(c?.subtotal ?? total) },
+        { dt: `Comisión (${c?.comisionPct ?? p.COMISION_PCT} %), la paga el tutor`, dd: c ? dinero(c.comision) : '…' },
+        { dt: 'Impuestos', dd: dinero(c?.impuestos ?? 0) },
         { dt: 'Total a pagar', dd: dinero(total), total: true },
       ]} />
-      <Text style={e.pequeno}>El pago queda retenido. Si el tutor no acepta en 12 horas o rechaza, se te devuelve completo.</Text>
+      <Text style={e.pequeno}>{c?.impuestosNota} El pago queda retenido. Si el tutor no acepta en {p.PLAZO_RESERVA_H} horas o rechaza, se te devuelve completo.</Text>
       {reservar.isError && <Alerta>{mensajeDe(reservar.error)}</Alerta>}
       <Boton texto={`Pagar ${dinero(total)} y reservar`} cargando={reservar.isPending} alPresionar={() => reservar.mutate()} />
     </Hoja>

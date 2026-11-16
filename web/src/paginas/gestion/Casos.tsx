@@ -44,7 +44,7 @@ export default function Casos() {
       title: 'Responsable', key: 'asignado',
       render: (_, c) => (c.asignado ? <>{c.asignado.nombre}{sub(ROL_TEXTO[c.asignado.rol ?? 'SOPORTE'])}</> : <Typography.Text type="secondary">Nadie</Typography.Text>),
     },
-    { title: 'Tutor', key: 'tutor', render: (_, c) => (c.tutorRespondio ? <Insignia tono="bien">Respondió</Insignia> : <Insignia tono="neutro">Sin respuesta</Insignia>) },
+    { title: 'Otra parte', key: 'contraparte', render: (_, c) => (c.contraparteRespondio ? <Insignia tono="bien">Respondió</Insignia> : <Insignia tono="neutro">Sin respuesta</Insignia>) },
     {
       title: activa === 'resueltos' ? 'Decisión' : 'Abierto', key: 'tiempo',
       render: (_, c) => (activa === 'resueltos' && c.decision

@@ -11,7 +11,10 @@ export type Verificacion = 'INCOMPLETO' | 'PENDIENTE' | 'APROBADO' | 'RECHAZADO'
 export type EstadoCaso = 'ABIERTA' | 'EN_REVISION' | 'ESCALADA' | 'RESUELTA';
 export type Decision = 'REEMBOLSO_TOTAL' | 'REEMBOLSO_PARCIAL' | 'LIBERAR';
 export type Canal = 'ESTUDIANTE' | 'TUTOR' | 'INTERNO';
-export type Accion = 'aceptar' | 'rechazar' | 'cancelar' | 'iniciar' | 'finalizar' | 'calificar' | 'disputa';
+export type Accion = 'aceptar' | 'rechazar' | 'cancelar' | 'iniciar' | 'finalizar' | 'calificar' | 'disputa'
+  | 'reprogramar' | 'responder-reprogramacion' | 'retirar-reprogramacion' | 'inasistencia' | 'reportar';
+/** Estado de moderación de un comentario (RF-M08-07, RF-M11-05). */
+export type Moderacion = 'VISIBLE' | 'RETENIDA' | 'REPORTADA' | 'OCULTA' | 'ELIMINADA';
 
 export interface Materia { id: number; nombre: string; area: string }
 export interface Bloque { diaSemana: number; horaInicio: number; horaFin: number }
@@ -44,20 +47,54 @@ export interface Sesion {
   id: number; tipo: 'PROGRAMADA' | 'BAJO_DEMANDA'; estado: EstadoSesion;
   inicio: string | null; duracionMin: number; modalidad: 'VIRTUAL' | 'PRESENCIAL'; tema: string;
   precio: number | null; expiraEn: string | null; iniciadaEn: string | null; finalizadaEn: string | null;
-  creadoEn: string; enlace: string | null;
+  creadoEn: string; enlace: string | null; cerradaEn: string | null; ausente: 'ESTUDIANTE' | 'TUTOR' | null;
   materia: { id: number; nombre: string };
   estudiante: { id: number; nombre: string };
   tutor: { id: number; nombre: string } | null;
   pago: Pago | null;
-  miCalificacion: { puntaje: number; comentario: string | null; publicada: boolean } | null;
-  calificacionRecibida: { puntaje: number; comentario: string | null } | null;
+  /** Fin del turno del tutor que consulta, si la solicitud inmediata está en su turno. */
+  turnoExpiraEn: string | null;
+  /** Bajo demanda por turnos: candidato al que se le ofrece ahora, de cuántos, y fin del turno. */
+  busqueda: { candidato: number; total: number; turnoExpiraEn: string | null } | null;
+  reprogramacion: { inicio: string; fecha: string; mia: boolean; propuestaPor: { id: number; nombre: string } } | null;
+  miCalificacion: { puntaje: number; comentario: string | null; publicada: boolean; moderacion: Moderacion } | null;
+  calificacionRecibida: { puntaje: number; comentario: string | null; moderacion: Moderacion } | null;
   disputa: {
     id: number; motivo: string; estado: EstadoCaso; decision: Decision | null; resolucion: string | null;
     creadoEn: string; resueltaEn: string | null; asignado: string | null; sala: string | null; salaCreadaEn: string | null;
+    autor: { id: number; nombre: string; rol: Rol }; mia: boolean;
   } | null;
+  /** Tutores sugeridos cuando la reserva no prosperó (rechazo, vencimiento, sin tutor o inasistencia del tutor). */
+  sugerencias: { id: number; nombre: string; tarifaHora: number; calificacion: number | null; enLinea: boolean }[];
   acciones: Accion[];
   reembolsoSiCancela: number | null;
-  tutoresAvisados?: number;
+  comentarioRetenido?: string | null;
+}
+
+/** Desglose del costo antes de reservar (RF-M05-03). */
+export interface Cotizacion {
+  tarifaHora: number; duracionMin: number; subtotal: number; comisionPct: number; comision: number; netoTutor: number;
+  impuestos: number; impuestosNota: string; total: number;
+}
+
+/** Valores vigentes de los parámetros del negocio (RF-M11-07). */
+export type Parametros = Record<string, number>;
+export interface ParametroAdmin {
+  clave: string; nombre: string; unidad: string; regla: string; descripcion: string; min: number; max: number; decimales?: boolean;
+  valor: number; valorInicial: number;
+  proximo: VersionParametro | null; historial: VersionParametro[];
+}
+export interface VersionParametro { id: number; clave: string; valor: number; vigenteDesde: string; motivo: string; creadoEn: string; autor: string | null }
+
+export interface ComentarioModeracion {
+  id: number; sesionId: number; materia: string; puntaje: number; comentario: string; publicada: boolean;
+  moderacion: Moderacion; motivo: string | null; creadoEn: string;
+  autor: Persona; destinatario: Persona; reportadaPor: string | null; reportadaEn: string | null;
+  moderadaPor: { nombre: string; rol: Rol } | null; moderadaEn: string | null;
+}
+export interface Moderaciones {
+  pendientes: ComentarioModeracion[]; revisados: ComentarioModeracion[]; umbral: number; minimo: number;
+  alertas: { id: number; nombre: string; alertaEn: string | null; promedio: number; valoraciones: number }[];
 }
 
 export interface SolicitudDemanda {
@@ -78,7 +115,8 @@ export interface Ingresos {
 
 export interface Resumen {
   estudiantes: number; tutoresAprobados: number; tutoresPendientes: number; tutoresEnLinea: number;
-  disputasAbiertas: number; disputasEscaladas: number; disputasSinAsignar: number; solicitudesMateria: number; sesionesTotales: number; sesionesFinalizadas: number;
+  disputasAbiertas: number; disputasEscaladas: number; disputasSinAsignar: number; solicitudesMateria: number;
+  comentariosPorModerar: number; alertasReputacion: number; sesionesTotales: number; sesionesFinalizadas: number;
   volumenPagado: number; comisiones: number; retenido: number;
   calificacionPromedio: number | null; tasaAsignacion: number | null;
   porEstado: { estado: EstadoSesion; total: number }[];
@@ -119,11 +157,14 @@ export interface Caso {
   id: number; estado: EstadoCaso; motivo: string; creadoEn: string;
   sesionId: number; materia: string; monto: number | null; estadoPago: EstadoPago | null;
   estudiante: Persona; tutor: Persona; asignado: Persona | null;
+  /** Quién abrió el caso: el estudiante o el tutor (RF-M11-03). */
+  autor: Persona;
   escalada: { por: string; motivo: string; fecha: string } | null;
   sala: string | null; salaCreadaEn: string | null;
   decision: Decision | null; resolucion: string | null; resueltaEn: string | null;
   resueltaPor: { nombre: string; rol: Rol } | null;
-  tutorRespondio: boolean; ultimaActividad: string;
+  /** La parte que no abrió el caso ya presentó su versión. */
+  contraparteRespondio: boolean; ultimaActividad: string;
 }
 
 export interface SesionEquipo extends Omit<Sesion, 'estudiante' | 'tutor'> {
@@ -134,7 +175,10 @@ export interface SesionEquipo extends Omit<Sesion, 'estudiante' | 'tutor'> {
     programadoInicio: string | null; programadoFin: string | null; realInicio: string | null; realFin: string | null;
     minutosReales: number | null; retrasoMin: number | null;
   };
-  calificaciones: { autor: string; deEstudiante: boolean; puntaje: number; comentario: string; publicada: boolean; fecha: string }[];
+  calificaciones: {
+    id: number; autor: string; deEstudiante: boolean; puntaje: number; comentario: string; publicada: boolean; fecha: string;
+    moderacion: Moderacion; motivoModeracion: string | null;
+  }[];
   disputaId: number | null; estadoDisputa: EstadoCaso | null;
   eventos: Evento[];
 }

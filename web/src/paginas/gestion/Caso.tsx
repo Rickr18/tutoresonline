@@ -50,7 +50,8 @@ export default function Caso() {
   const parcialEstudiante = Math.round(monto / 2);
   const efectos: Record<Decision, string> = {
     REEMBOLSO_TOTAL: `El estudiante recibe ${dinero(monto)}. El tutor no recibe pago.`,
-    REEMBOLSO_PARCIAL: `El estudiante recibe ${dinero(parcialEstudiante)} y el tutor ${dinero((monto - parcialEstudiante) * 0.85)} después de la comisión.`,
+    // La comisión es la que quedó guardada en el pago al cobrarse (RF-M11-07: los cambios no son retroactivos).
+    REEMBOLSO_PARCIAL: `El estudiante recibe ${dinero(parcialEstudiante)} y el tutor ${dinero((monto - parcialEstudiante) * (1 - (monto ? (c.sesion.pago?.comision ?? 0) / monto : 0.15)))} después de la comisión.`,
     LIBERAR: `El tutor recibe ${dinero(c.sesion.pago?.netoTutor ?? 0)}. El estudiante no recibe devolución.`,
   };
   const delCanal = c.mensajes.filter((m) => m.canal === canal);
@@ -64,7 +65,7 @@ export default function Caso() {
         <div>
           <Typography.Title level={2} style={{ margin: 0 }}>Caso #{c.id} · {c.materia}</Typography.Title>
           <Typography.Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
-            {c.estudiante.nombre} contra {c.tutor.nombre} · abierto {haceCuanto(c.creadoEn)} ({fechaHora(c.creadoEn)}) ·{' '}
+            {c.autor.nombre} contra {c.autor.id === c.estudiante.id ? c.tutor.nombre : c.estudiante.nombre} · abierto {haceCuanto(c.creadoEn)} ({fechaHora(c.creadoEn)}) ·{' '}
             {c.asignado ? <>responsable: <b>{c.asignado.nombre}</b> ({ROL_TEXTO[c.asignado.rol ?? 'SOPORTE'].toLowerCase()})</> : 'sin responsable'}
           </Typography.Paragraph>
         </div>
@@ -107,7 +108,8 @@ export default function Caso() {
             <Card title="Reclamo del estudiante">
               <blockquote className="cita">{c.motivo}</blockquote>
               <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                {c.tutorRespondio ? 'El tutor ya presentó su versión en su conversación.' : 'El tutor todavía no ha presentado su versión.'}
+                {`Abrió el caso ${c.autor.nombre} (${c.autor.id === c.estudiante.id ? 'estudiante' : 'tutor'}). `}
+                {c.contraparteRespondio ? 'La otra parte ya presentó su versión en su conversación.' : 'La otra parte todavía no ha presentado su versión.'}
               </Typography.Text>
             </Card>
             <FichaSesion s={c.sesion} enlaceDetalle />

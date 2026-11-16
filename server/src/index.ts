@@ -9,11 +9,14 @@ import { tx, uno, todos, ejecutar, sembrar, VERSION_TERMINOS } from './db.js';
 import {
   ErrorHttp, texto, entero, opcion, firmar, autenticar, soloRol, montarTiempoReal, emitir, notificar, avisarSesion,
   vistaTutor, tutorPorId, buscarTutores, franjasLibres, franjaDisponible, validarPago, cobrar, reembolsar,
-  porcentajeReembolso, sesionPorId, sesionesDonde, vistaSesion, enlaceVirtual, tutoresElegibles, finalizarSesion,
-  ahoraIso, MODO_DEMO, VENTANA_DEMANDA, VENTANA_PROGRAMADA, MIN, registrar, eventosDe, idsDeRol, esEquipo,
+  porcentajeReembolso, sesionPorId, sesionesDonde, vistaSesion, enlaceVirtual, finalizarSesion,
+  ahoraIso, MODO_DEMO, MIN, registrar, eventosDe, idsDeRol, esEquipo,
   COLUMNAS_USUARIO, validarClave, accionesSobre, exigirAccion, auditar,
+  param, plazo, comision, horasTexto, cotizar, exigirSinCruce, ajustarRetencion, candidatosOrdenados, avanzarTurno, pasarTurno,
+  iniciarSesion, reportarInasistencia, revisarComentario, revisarReputacion,
   type Usuario,
 } from './nucleo.js';
+import { PARAMETROS, DEFINICION, type ClaveParametro } from './parametros.js';
 import { duracionTexto, fechaHoraCo, horaCo, pesos } from './formato.js';
 import { iniciarTareas } from './tareas.js';
 import { montarCasos, montarDescargas, emitirCaso } from './casos.js';
@@ -31,12 +34,17 @@ const api = express.Router();
 app.use('/api', api);
 
 const DURACIONES = [60, 90, 120];
+/** RF-M05-02: el tema es obligatorio y de al menos 20 caracteres, para que el tutor pueda decidir. */
+const TEMA_MIN = 20;
 
 /* ---------- Público ---------- */
 
 api.get('/salud', (_req, res) => res.json({ ok: true, modoDemo: MODO_DEMO, hora: ahoraIso() }));
 
 api.get('/materias', (_req, res) => res.json(todos('SELECT id, nombre, area FROM materias WHERE activa = 1 ORDER BY area, nombre')));
+
+/** Valores vigentes de los parámetros del negocio (RF-M11-07), para que las pantallas muestren los plazos reales. */
+api.get('/parametros', (_req, res) => res.json(Object.fromEntries(PARAMETROS.map((p) => [p.clave, param(p.clave)]))));
 
 /** Datos públicos para la página de inicio: cifras generales y los tutores mejor calificados (sin correos ni datos privados). */
 api.get('/vitrina', (_req, res) => {
@@ -188,13 +196,25 @@ api.get('/tutores/:id', (req, res) => {
     ...vistaTutor(f),
     disponibilidad: todos(`SELECT dia_semana AS diaSemana, hora_inicio AS horaInicio, hora_fin AS horaFin
                            FROM disponibilidad WHERE tutor_id = ? ORDER BY dia_semana, hora_inicio`, f.id),
-    resenas: todos(`SELECT c.puntaje, c.comentario, c.creado_en AS fecha, u.nombre AS autor
+    // Un comentario retenido, reportado u oculto no se muestra (RF-M08-07); uno eliminado tampoco cuenta.
+    resenas: todos(`SELECT c.puntaje, CASE WHEN c.moderacion = 'VISIBLE' THEN c.comentario ELSE '' END AS comentario,
+                    c.creado_en AS fecha, u.nombre AS autor
                     FROM calificaciones c JOIN usuarios u ON u.id = c.autor_id
-                    WHERE c.destinatario_id = ? AND c.publicada = 1 ORDER BY c.creado_en DESC LIMIT 10`, f.id),
+                    WHERE c.destinatario_id = ? AND c.publicada = 1 AND c.moderacion <> 'ELIMINADA'
+                    ORDER BY c.creado_en DESC LIMIT 10`, f.id),
   });
 });
 
 api.get('/tutores/:id/franjas', (req, res) => res.json(franjasLibres(entero(req.params.id, 'El tutor'))));
+
+/** RF-M05-03: costo total con su desglose antes de confirmar la reserva. */
+api.get('/tutores/:id/cotizacion', (req, res) => {
+  const t = tutorPorId(entero(req.params.id, 'El tutor'));
+  if (!t) throw new ErrorHttp(404, 'El tutor no existe.');
+  const duracion = entero(req.query.duracionMin ?? 60, 'La duración');
+  if (!DURACIONES.includes(duracion)) throw new ErrorHttp(400, 'La duración debe ser de 60, 90 o 120 minutos.');
+  res.json(cotizar(t.tarifa_hora, duracion));
+});
 
 /* ---------- Perfil y agenda del tutor (P-02, P-05) ---------- */
 
@@ -313,10 +333,11 @@ api.post('/sesiones', soloRol('ESTUDIANTE'), (req, res) => {
   const duracion = entero(b.duracionMin, 'La duración');
   if (!DURACIONES.includes(duracion)) throw new ErrorHttp(400, 'La duración debe ser de 60, 90 o 120 minutos.');
   const modalidad = opcion(b.modalidad, 'La modalidad', ['VIRTUAL', 'PRESENCIAL'] as const);
-  const tema = texto(b.tema, 'El tema', 3, 200);
+  const tema = texto(b.tema, 'El tema', TEMA_MIN, 200); // RF-M05-02 (E7 de P-04)
   const inicio = Date.parse(String(b.inicio));
   if (Number.isNaN(inicio)) throw new ErrorHttp(400, 'La fecha de la sesión no es válida.');
   if (tutorId === req.yo.id) throw new ErrorHttp(400, 'No puedes reservar una sesión contigo mismo.'); // RN-10
+  exigirSinCruce(req.yo.id, inicio, duracion); // RF-M05-08 (E4 de P-04)
 
   const t = tutorPorId(tutorId);
   if (!t || t.verificacion !== 'APROBADO' || t.estado !== 'ACTIVO') throw new ErrorHttp(404, 'El tutor no está disponible.');
@@ -329,7 +350,7 @@ api.post('/sesiones', soloRol('ESTUDIANTE'), (req, res) => {
   const precio = Math.round((t.tarifa_hora * duracion) / 60);
 
   const id = tx(() => {
-    const expira = new Date(Math.min(Date.now() + VENTANA_PROGRAMADA, inicio)).toISOString();
+    const expira = new Date(Math.min(Date.now() + plazo.reserva(), inicio)).toISOString();
     const sid = Number(ejecutar(`INSERT INTO sesiones (estudiante_id, tutor_id, materia_id, tipo, estado, inicio, duracion_min, modalidad,
       tema, precio, metodo_pago, expira_en, creado_en) VALUES (?,?,?, 'PROGRAMADA', 'PENDIENTE_ACEPTACION', ?,?,?,?,?,?,?,?)`,
       req.yo.id, tutorId, materiaId, new Date(inicio).toISOString(), duracion, modalidad, tema, precio, metodo, expira, ahoraIso()).lastInsertRowid);
@@ -337,7 +358,8 @@ api.post('/sesiones', soloRol('ESTUDIANTE'), (req, res) => {
     registrar(sid, 'SESION_CREADA', `${req.yo.nombre} reservó ${materiaNombre} con ${t.nombre} para el ${fechaHoraCo(inicio)} `
       + `(${duracionTexto(duracion)}, ${modalidad === 'VIRTUAL' ? 'virtual' : 'presencial'}). Tema: ${tema}.`, req.yo.id);
     cobrar(sid, precio, metodo);
-    notificar(tutorId, 'Nueva solicitud de reserva', `${req.yo.nombre} quiere una sesión. Tienes 12 horas para responder.`, sid);
+    notificar(tutorId, 'Nueva solicitud de reserva',
+      `${req.yo.nombre} quiere una sesión. Tienes ${horasTexto(param('PLAZO_RESERVA_H'))} para responder.`, sid);
     return sid;
   });
   const s = sesionPorId(id);
@@ -352,40 +374,44 @@ api.post('/sesiones/demanda', soloRol('ESTUDIANTE'), (req, res) => {
   const materiaId = entero(b.materiaId, 'La materia');
   const duracion = entero(b.duracionMin, 'La duración');
   if (!DURACIONES.includes(duracion)) throw new ErrorHttp(400, 'La duración debe ser de 60, 90 o 120 minutos.');
-  const tema = texto(b.tema, 'El tema', 3, 200);
+  const tema = texto(b.tema, 'El tema', TEMA_MIN, 200);
   if (!uno('SELECT 1 AS x FROM materias WHERE id = ? AND activa = 1', materiaId)) throw new ErrorHttp(400, 'La materia no está disponible.');
   if (uno(`SELECT 1 AS x FROM sesiones WHERE estudiante_id = ? AND estado = 'BUSCANDO_TUTOR'`, req.yo.id))
-    throw new ErrorHttp(409, 'Ya tienes una solicitud en curso.');
-  const metodo = validarPago(b.pago); // se valida ahora y se cobra cuando un tutor acepta
+    throw new ErrorHttp(409, 'Ya tienes una solicitud en curso.'); // E5 de P-06
+  exigirSinCruce(req.yo.id, Date.now(), duracion);
+  const metodo = validarPago(b.pago); // E1 de P-06: si la autorización falla, la solicitud no se difunde
 
-  const candidatos = tutoresElegibles(materiaId).filter((id) => id !== req.yo.id);
   const id = tx(() => {
     const sid = Number(ejecutar(`INSERT INTO sesiones (estudiante_id, materia_id, tipo, estado, duracion_min, modalidad, tema,
-      metodo_pago, expira_en, creado_en) VALUES (?,?, 'BAJO_DEMANDA', ?,?, 'VIRTUAL', ?,?,?,?)`,
-      req.yo.id, materiaId, candidatos.length ? 'BUSCANDO_TUTOR' : 'SIN_TUTOR', duracion, tema, metodo,
-      candidatos.length ? new Date(Date.now() + VENTANA_DEMANDA).toISOString() : null, ahoraIso()).lastInsertRowid);
+      metodo_pago, expira_en, creado_en) VALUES (?,?, 'BAJO_DEMANDA', 'BUSCANDO_TUTOR', ?, 'VIRTUAL', ?,?,?,?)`,
+      req.yo.id, materiaId, duracion, tema, metodo, new Date(Date.now() + plazo.busqueda()).toISOString(), ahoraIso()).lastInsertRowid);
     registrar(sid, 'SESION_CREADA', `${req.yo.nombre} pidió un tutor ahora (${duracionTexto(duracion)}). Tema: ${tema}.`, req.yo.id);
-    if (candidatos.length) {
-      const nombres = todos<{ nombre: string }>(`SELECT nombre FROM usuarios WHERE id IN (${candidatos.map(() => '?').join(',')})`, ...candidatos)
-        .map((u) => u.nombre).join(', ');
-      registrar(sid, 'TUTORES_AVISADOS', `La solicitud llegó a ${candidatos.length} ${candidatos.length === 1 ? 'tutor' : 'tutores'} en línea: ${nombres}.`);
-    } else registrar(sid, 'SIN_TUTOR', 'No había tutores en línea para la materia. No se hizo ningún cobro.');
-    for (const c of candidatos) notificar(c, 'Solicitud inmediata', `${req.yo.nombre} necesita tutoría ahora. El primero en aceptar la toma.`, sid);
+    const s = sesionPorId(sid);
+    const candidatos = candidatosOrdenados(materiaId, sid, req.yo.id);
+    if (!candidatos.length) {
+      // E2 de P-06: sin tutores en línea se informa de inmediato y no se retiene nada.
+      ejecutar(`UPDATE sesiones SET estado = 'SIN_TUTOR', expira_en = NULL WHERE id = ?`, sid);
+      registrar(sid, 'SIN_TUTOR', 'No había tutores en línea para la materia. No se hizo ningún cobro.');
+      return sid;
+    }
+    // Paso 2 de P-06 (RF-M06-07): se retiene el valor estimado antes de difundir; al asignarse el tutor se ajusta a su tarifa.
+    const estimado = Math.round((Math.max(...candidatos.map((c) => c.tarifa_hora)) * duracion) / 60);
+    cobrar(sid, estimado, metodo, `Se retuvieron ${pesos(estimado)} con ${metodo}, el valor estimado de la sesión, antes de buscar tutor.`);
+    avanzarTurno(s);
     return sid;
   });
-  emitir(candidatos, { tipo: 'demanda' });
-  res.status(201).json({ ...vistaSesion(sesionPorId(id), req.yo), tutoresAvisados: candidatos.length });
+  res.status(201).json(vistaSesion(sesionPorId(id), req.yo));
 });
 
+/** Solicitudes inmediatas que el tutor tiene en su turno ahora (RF-M06-05). */
 api.get('/demanda/abiertas', soloRol('TUTOR'), (req, res) => {
   const t = tutorPorId(req.yo.id);
   if (t.verificacion !== 'APROBADO' || !t.en_linea) return res.json([]);
-  const filas = sesionesDonde(`s.estado = 'BUSCANDO_TUTOR' AND s.expira_en > ?
-    AND s.materia_id IN (SELECT materia_id FROM tutor_materias WHERE tutor_id = ?)
-    AND NOT EXISTS (SELECT 1 FROM demanda_descartes d WHERE d.sesion_id = s.id AND d.tutor_id = ?)`, ahoraIso(), req.yo.id, req.yo.id);
+  const filas = sesionesDonde(`s.estado = 'BUSCANDO_TUTOR' AND s.turno_tutor_id = ? AND s.turno_expira_en > ?`, req.yo.id, ahoraIso());
   res.json(filas.map((s) => ({
     id: s.id, materia: { id: s.materia_id, nombre: s.materia_nombre }, estudiante: { id: s.estudiante_id, nombre: s.estudiante_nombre },
-    tema: s.tema, duracionMin: s.duracion_min, expiraEn: s.expira_en, ganancia: Math.round((t.tarifa_hora * s.duracion_min) / 60 * 0.85),
+    tema: s.tema, duracionMin: s.duracion_min, expiraEn: s.turno_expira_en,
+    ganancia: Math.round(((t.tarifa_hora * s.duracion_min) / 60) * (1 - comision())),
   })));
 });
 
@@ -420,7 +446,15 @@ api.post('/sesiones/:id/sala', (req, res) => {
   const cual = opcion(req.body.cual ?? 'CLASE', 'La sala', ['CLASE', 'MEDIACION'] as const);
   if (cual === 'CLASE') {
     if (!s.enlace || !['CONFIRMADA', 'EN_CURSO'].includes(s.estado)) throw new ErrorHttp(409, 'La sala de esta sesión no está disponible.');
-    registrar(s.id, 'SALA_ABIERTA', `${req.yo.nombre} abrió el enlace de la sala virtual.`, req.yo.id);
+    tx(() => {
+      registrar(s.id, 'SALA_ABIERTA', `${req.yo.nombre} abrió el enlace de la sala virtual.`, req.yo.id);
+      // Diagrama de estados del Corte 2: cuando las dos partes se conectan, la sesión pasa a En curso.
+      const entraron = uno<{ n: number }>(`SELECT COUNT(DISTINCT actor_id) AS n FROM eventos
+        WHERE sesion_id = ? AND tipo = 'SALA_ABIERTA' AND actor_id IN (?, ?)`, s.id, s.estudiante_id, s.tutor_id)!.n;
+      const aTiempo = MODO_DEMO || Date.now() >= Date.parse(s.inicio) - 10 * MIN;
+      const libre = !uno(`SELECT 1 AS x FROM sesiones WHERE tutor_id = ? AND estado = 'EN_CURSO'`, s.tutor_id);
+      if (s.estado === 'CONFIRMADA' && entraron === 2 && aTiempo && libre) iniciarSesion(s, null);
+    });
     return res.json({ enlace: s.enlace });
   }
   const d = uno('SELECT * FROM disputas WHERE sesion_id = ?', s.id);
@@ -434,8 +468,8 @@ api.post('/sesiones/:id/sala', (req, res) => {
 
 api.post('/sesiones/:id/aceptar', soloRol('TUTOR'), (req, res) => {
   const s = sesionPorId(entero(req.params.id, 'La sesión'));
-  if (s.tipo === 'BAJO_DEMANDA' && s.estado !== 'BUSCANDO_TUTOR')
-    throw new ErrorHttp(409, 'Otro tutor aceptó primero o la solicitud venció.');
+  if (s.tipo === 'BAJO_DEMANDA' && (s.estado !== 'BUSCANDO_TUTOR' || s.turno_tutor_id !== req.yo.id))
+    throw new ErrorHttp(409, 'La solicitud ya fue asignada o pasó al siguiente tutor.');
   if (s.tipo === 'PROGRAMADA') {
     if (s.tutor_id !== req.yo.id) throw new ErrorHttp(403, 'No participas en esta sesión.');
     if (s.estado !== 'PENDIENTE_ACEPTACION') throw new ErrorHttp(409, 'La solicitud ya no está pendiente.');
@@ -449,20 +483,22 @@ api.post('/sesiones/:id/aceptar', soloRol('TUTOR'), (req, res) => {
     });
   } else {
     const t = tutorPorId(req.yo.id);
-    if (!tutoresElegibles(s.materia_id, s.id).includes(req.yo.id))
+    if (!t.en_linea || uno(`SELECT 1 AS x FROM sesiones WHERE tutor_id = ? AND estado = 'EN_CURSO'`, req.yo.id))
       throw new ErrorHttp(403, 'No puedes tomar esta solicitud: revisa que estés en línea y sin otra sesión en curso.');
     const precio = Math.round((t.tarifa_hora * s.duracion_min) / 60);
     tx(() => {
-      // RN-04: gana el primer tutor que acepta. La condición sobre el estado decide el empate.
-      const r = ejecutar(`UPDATE sesiones SET estado = 'CONFIRMADA', tutor_id = ?, inicio = ?, precio = ?, enlace = ?, expira_en = NULL
-        WHERE id = ? AND estado = 'BUSCANDO_TUTOR' AND expira_en > ?`, req.yo.id, ahoraIso(), precio, enlaceVirtual(s.id), s.id, ahoraIso());
-      if (Number(r.changes) !== 1) throw new ErrorHttp(409, 'Otro tutor aceptó primero o la solicitud venció.');
+      // RN-04: la asignación es atómica. Solo cambia si sigue buscando, el turno es de este tutor y no ha vencido.
+      const r = ejecutar(`UPDATE sesiones SET estado = 'CONFIRMADA', tutor_id = ?, inicio = ?, precio = ?, enlace = ?, expira_en = NULL,
+        turno_tutor_id = NULL, turno_expira_en = NULL
+        WHERE id = ? AND estado = 'BUSCANDO_TUTOR' AND turno_tutor_id = ? AND turno_expira_en > ?`,
+        req.yo.id, ahoraIso(), precio, enlaceVirtual(s.id), s.id, req.yo.id, ahoraIso());
+      if (Number(r.changes) !== 1) throw new ErrorHttp(409, 'La solicitud ya fue asignada o pasó al siguiente tutor.');
       const seg = Math.round((Date.now() - Date.parse(s.creado_en)) / 1000);
-      registrar(s.id, 'ACEPTADA', `${req.yo.nombre} tomó la solicitud a los ${seg} segundos (primer tutor en aceptar).`, req.yo.id);
-      cobrar(s.id, precio, s.metodo_pago);
-      notificar(s.estudiante_id, 'Tutor encontrado', `${req.yo.nombre} aceptó tu solicitud. Se cobraron ${pesos(precio)}.`, s.id);
+      registrar(s.id, 'ACEPTADA', `${req.yo.nombre} tomó la solicitud a los ${seg} segundos, en su turno. Se generó la sala virtual.`, req.yo.id);
+      ajustarRetencion(s.id, precio, req.yo.nombre);
+      notificar(s.estudiante_id, 'Tutor encontrado', `${req.yo.nombre} aceptó tu solicitud. El valor de la sesión es ${pesos(precio)}.`, s.id);
     });
-    emitir(tutoresElegibles(s.materia_id), { tipo: 'demanda' });
+    emitir(req.yo.id, { tipo: 'demanda' });
   }
   const nueva = sesionPorId(s.id);
   avisarSesion(nueva);
@@ -472,17 +508,9 @@ api.post('/sesiones/:id/aceptar', soloRol('TUTOR'), (req, res) => {
 api.post('/sesiones/:id/rechazar', soloRol('TUTOR'), (req, res) => {
   const s = sesionVisible(req);
   if (s.tipo === 'BAJO_DEMANDA') {
-    if (s.estado !== 'BUSCANDO_TUTOR') throw new ErrorHttp(409, 'La solicitud ya se cerró.');
-    tx(() => {
-      ejecutar('INSERT OR IGNORE INTO demanda_descartes VALUES (?,?)', s.id, req.yo.id);
-      registrar(s.id, 'SOLICITUD_DESCARTADA', `${req.yo.nombre} pasó la solicitud.`, req.yo.id);
-      if (!tutoresElegibles(s.materia_id, s.id).length) {
-        ejecutar(`UPDATE sesiones SET estado = 'SIN_TUTOR', expira_en = NULL WHERE id = ?`, s.id);
-        registrar(s.id, 'SIN_TUTOR', 'Todos los tutores avisados pasaron la solicitud. No se hizo ningún cobro.');
-        notificar(s.estudiante_id, 'No encontramos tutor', 'Ningún tutor disponible tomó la solicitud. No se hizo ningún cobro.', s.id);
-      }
-    });
-    avisarSesion(s);
+    if (s.estado !== 'BUSCANDO_TUTOR' || s.turno_tutor_id !== req.yo.id) throw new ErrorHttp(409, 'La solicitud ya no está en tu turno.');
+    // A1 de P-06: el tutor pasa y la solicitud sigue con el siguiente candidato, sin reiniciar el límite global.
+    tx(() => pasarTurno(s, `${req.yo.nombre} pasó la solicitud; siguió el siguiente candidato.`, req.yo.id));
     return res.json({ ok: true });
   }
   if (s.tutor_id !== req.yo.id) throw new ErrorHttp(403, 'No participas en esta sesión.');
@@ -491,7 +519,9 @@ api.post('/sesiones/:id/rechazar', soloRol('TUTOR'), (req, res) => {
     ejecutar(`UPDATE sesiones SET estado = 'CANCELADA', expira_en = NULL, cancelada_por = ? WHERE id = ?`, req.yo.id, s.id);
     registrar(s.id, 'RECHAZADA', `${req.yo.nombre} rechazó la reserva.`, req.yo.id);
     reembolsar(s.id, 100);
-    notificar(s.estudiante_id, 'Reserva rechazada', `${req.yo.nombre} no puede atenderte en ese horario. Te devolvimos el pago completo.`, s.id);
+    // A1 de P-04: se libera la franja, se devuelve el pago y se sugieren otros tutores (los muestra la sesión).
+    notificar(s.estudiante_id, 'Reserva rechazada',
+      `${req.yo.nombre} no puede atenderte en ese horario. Te devolvimos el pago completo y te sugerimos otros tutores de ${s.materia_nombre}.`, s.id);
   });
   avisarSesion(s);
   res.json(vistaSesion(sesionPorId(s.id), req.yo));
@@ -506,16 +536,74 @@ api.post('/sesiones/:id/cancelar', (req, res) => {
   const porcentaje = porcentajeReembolso(s, req.yo);
   const otro = req.yo.id === s.estudiante_id ? s.tutor_id : s.estudiante_id;
   tx(() => {
-    ejecutar(`UPDATE sesiones SET estado = 'CANCELADA', expira_en = NULL, cancelada_por = ? WHERE id = ?`, req.yo.id, s.id);
+    ejecutar(`UPDATE sesiones SET estado = 'CANCELADA', expira_en = NULL, cancelada_por = ?, turno_tutor_id = NULL, turno_expira_en = NULL,
+              repro_inicio = NULL, repro_por = NULL, repro_en = NULL WHERE id = ?`, req.yo.id, s.id);
     const faltaban = s.inicio ? (Date.parse(s.inicio) - Date.now()) / MIN : null;
     registrar(s.id, 'CANCELADA', `${req.yo.nombre} canceló la sesión`
       + (faltaban !== null && faltaban > 0 && s.estado === 'CONFIRMADA' ? ` cuando faltaban ${duracionTexto(faltaban)} para empezar.` : '.'), req.yo.id);
-    const devuelto = reembolsar(s.id, porcentaje);
+    // A4 de P-06: cancelar mientras se busca tutor libera toda la retención.
+    const devuelto = s.estado === 'BUSCANDO_TUTOR'
+      ? reembolsar(s.id, 100, 'Se liberó la retención del pago: la búsqueda se canceló sin costo.')
+      : reembolsar(s.id, porcentaje);
     if (otro) notificar(otro, 'Sesión cancelada', `${req.yo.nombre} canceló la sesión de ${s.materia_nombre}.` +
       (otro === s.estudiante_id ? ` Te devolvimos ${pesos(devuelto)}.` : ''), s.id);
   });
   avisarSesion(s);
-  if (s.tipo === 'BAJO_DEMANDA') emitir(tutoresElegibles(s.materia_id), { tipo: 'demanda' });
+  if (s.turno_tutor_id) emitir(s.turno_tutor_id, { tipo: 'demanda' });
+  res.json(vistaSesion(sesionPorId(s.id), req.yo));
+});
+
+/* ---------- Reprogramación (RF-M05-07, A5 de P-04) ---------- */
+
+/** Una parte propone una fecha nueva. La franja actual se conserva hasta que la otra parte acepte. */
+api.post('/sesiones/:id/reprogramar', (req, res) => {
+  const s = sesionVisible(req);
+  if (!vistaSesion(s, req.yo).acciones.includes('reprogramar')) throw new ErrorHttp(409, 'Esta sesión no se puede reprogramar ahora.');
+  const inicio = Date.parse(String(req.body.inicio));
+  if (Number.isNaN(inicio)) throw new ErrorHttp(400, 'La fecha nueva no es válida.');
+  if (inicio === Date.parse(s.inicio)) throw new ErrorHttp(400, 'Elige una fecha distinta de la actual.');
+  if (!franjaDisponible(s.tutor_id, inicio, s.duracion_min, s.id)) throw new ErrorHttp(409, 'El tutor no tiene libre ese horario. Elige otro.');
+  exigirSinCruce(s.estudiante_id, inicio, s.duracion_min, s.id);
+  const otro = req.yo.id === s.estudiante_id ? s.tutor_id : s.estudiante_id;
+  tx(() => {
+    ejecutar('UPDATE sesiones SET repro_inicio = ?, repro_por = ?, repro_en = ? WHERE id = ?', new Date(inicio).toISOString(), req.yo.id, ahoraIso(), s.id);
+    registrar(s.id, 'REPROGRAMACION_PROPUESTA',
+      `${req.yo.nombre} propuso pasar la sesión del ${fechaHoraCo(s.inicio)} al ${fechaHoraCo(inicio)}.`, req.yo.id);
+    notificar(otro, 'Propuesta de reprogramación',
+      `${req.yo.nombre} propone pasar la sesión de ${s.materia_nombre} al ${fechaHoraCo(inicio)}. Acepta o rechaza el cambio.`, s.id);
+  });
+  avisarSesion(s);
+  res.json(vistaSesion(sesionPorId(s.id), req.yo));
+});
+
+/** La contraparte acepta o rechaza la propuesta; quien la hizo también puede retirarla. */
+api.post('/sesiones/:id/reprogramacion', (req, res) => {
+  const s = sesionVisible(req);
+  const acciones = vistaSesion(s, req.yo).acciones;
+  const retirar = req.body.retirar === true;
+  if (!acciones.includes(retirar ? 'retirar-reprogramacion' : 'responder-reprogramacion'))
+    throw new ErrorHttp(409, 'No hay una propuesta de reprogramación por responder.');
+  const aceptar = !retirar && req.body.aceptar === true;
+  const nuevo = Date.parse(s.repro_inicio);
+  if (aceptar) {
+    if (!franjaDisponible(s.tutor_id, nuevo, s.duracion_min, s.id)) throw new ErrorHttp(409, 'Ese horario ya no está libre. Rechaza la propuesta y pide otra fecha.');
+    exigirSinCruce(s.estudiante_id, nuevo, s.duracion_min, s.id);
+  }
+  tx(() => {
+    if (aceptar) {
+      // Al cambiar la fecha se vuelven a programar los recordatorios (entrada del estado Confirmada en el Corte 2).
+      ejecutar(`UPDATE sesiones SET inicio = ?, repro_inicio = NULL, repro_por = NULL, repro_en = NULL,
+                recordatorio_1_en = NULL, recordatorio_2_en = NULL WHERE id = ?`, s.repro_inicio, s.id);
+      registrar(s.id, 'REPROGRAMADA', `${req.yo.nombre} aceptó el cambio: la sesión pasó del ${fechaHoraCo(s.inicio)} al ${fechaHoraCo(nuevo)}. El pago sigue retenido.`, req.yo.id);
+      notificar(s.repro_por, 'Reprogramación aceptada', `${req.yo.nombre} aceptó: la sesión de ${s.materia_nombre} es el ${fechaHoraCo(nuevo)}.`, s.id);
+    } else {
+      ejecutar('UPDATE sesiones SET repro_inicio = NULL, repro_por = NULL, repro_en = NULL WHERE id = ?', s.id);
+      registrar(s.id, retirar ? 'REPROGRAMACION_RETIRADA' : 'REPROGRAMACION_RECHAZADA',
+        `${req.yo.nombre} ${retirar ? 'retiró su propuesta' : 'rechazó la propuesta'} de reprogramación. La sesión sigue el ${fechaHoraCo(s.inicio)}.`, req.yo.id);
+      if (!retirar) notificar(s.repro_por, 'Reprogramación rechazada', `${req.yo.nombre} prefiere mantener la sesión el ${fechaHoraCo(s.inicio)}.`, s.id);
+    }
+  });
+  avisarSesion(s);
   res.json(vistaSesion(sesionPorId(s.id), req.yo));
 });
 
@@ -527,21 +615,24 @@ api.post('/sesiones/:id/iniciar', soloRol('TUTOR'), (req, res) => {
     throw new ErrorHttp(409, 'La sesión solo se puede iniciar desde 10 minutos antes de la hora reservada.');
   if (uno(`SELECT 1 AS x FROM sesiones WHERE tutor_id = ? AND estado = 'EN_CURSO'`, req.yo.id))
     throw new ErrorHttp(409, 'Ya tienes otra sesión en curso.');
-  const ahora = ahoraIso();
-  ejecutar(`UPDATE sesiones SET estado = 'EN_CURSO', iniciada_en = ? WHERE id = ?`, ahora, s.id);
-  const dif = Math.round((Date.parse(ahora) - Date.parse(s.inicio)) / MIN);
-  registrar(s.id, 'INICIADA', `${req.yo.nombre} inició la sesión a las ${horaCo(ahora)}` + (s.tipo === 'BAJO_DEMANDA' ? ', apenas aceptó la solicitud.'
-    : dif > 1 ? `, ${duracionTexto(dif)} después de la hora reservada.`
-      : dif < -1 ? `, ${duracionTexto(-dif)} antes de la hora reservada${MODO_DEMO ? ' (modo demostración)' : ''}.` : ', a la hora reservada.'), req.yo.id);
-  notificar(s.estudiante_id, 'Tu sesión comenzó', `${req.yo.nombre} inició la sesión de ${s.materia_nombre}.`, s.id);
-  avisarSesion(s);
+  tx(() => iniciarSesion(s, req.yo));
   res.json(vistaSesion(sesionPorId(s.id), req.yo));
 });
 
-api.post('/sesiones/:id/finalizar', soloRol('TUTOR'), (req, res) => {
+/** RF-M07-04: cualquiera de las dos partes marca la sesión como finalizada. */
+api.post('/sesiones/:id/finalizar', (req, res) => {
   const s = sesionVisible(req);
-  if (s.tutor_id !== req.yo.id || s.estado !== 'EN_CURSO') throw new ErrorHttp(409, 'La sesión no está en curso.');
-  tx(() => finalizarSesion(s));
+  if (!vistaSesion(s, req.yo).acciones.includes('finalizar')) throw new ErrorHttp(409, 'La sesión no está en curso.');
+  tx(() => finalizarSesion(s, req.yo));
+  res.json(vistaSesion(sesionPorId(s.id), req.yo));
+});
+
+/** RF-M07-05: pasada la tolerancia, una parte reporta que la otra no se conectó. */
+api.post('/sesiones/:id/inasistencia', (req, res) => {
+  const s = sesionVisible(req);
+  if (!vistaSesion(s, req.yo).acciones.includes('inasistencia'))
+    throw new ErrorHttp(409, `La inasistencia se reporta después de ${param('TOLERANCIA_MIN')} minutos de la hora pactada y si la otra parte no entró a la sala.`);
+  tx(() => reportarInasistencia(s, req.yo));
   res.json(vistaSesion(sesionPorId(s.id), req.yo));
 });
 
@@ -554,38 +645,65 @@ api.post('/sesiones/:id/calificar', (req, res) => {
   const puntaje = entero(req.body.puntaje, 'El puntaje', 1, 5);
   const comentario = String(req.body.comentario ?? '').trim().slice(0, 400);
   const destinatario = req.yo.id === s.estudiante_id ? s.tutor_id : s.estudiante_id;
+  // E2 de P-08: el filtro automático retiene el comentario con lenguaje ofensivo o datos personales.
+  const retenido = comentario ? revisarComentario(comentario) : null;
   tx(() => {
-    ejecutar(`INSERT INTO calificaciones (sesion_id, autor_id, destinatario_id, puntaje, comentario, creado_en) VALUES (?,?,?,?,?,?)`,
-      s.id, req.yo.id, destinatario, puntaje, comentario, ahoraIso());
-    // RN-08: se publican juntas cuando ambas partes ya calificaron.
+    ejecutar(`INSERT INTO calificaciones (sesion_id, autor_id, destinatario_id, puntaje, comentario, moderacion, moderacion_motivo, creado_en)
+              VALUES (?,?,?,?,?,?,?,?)`,
+      s.id, req.yo.id, destinatario, puntaje, comentario, retenido ? 'RETENIDA' : 'VISIBLE', retenido, ahoraIso());
     const otroNombre = req.yo.id === s.estudiante_id ? s.tutor_nombre : s.estudiante_nombre;
     registrar(s.id, 'CALIFICADA', `${req.yo.nombre} calificó a ${otroNombre} con ${puntaje} ${puntaje === 1 ? 'estrella' : 'estrellas'}.`, req.yo.id);
+    if (retenido) {
+      registrar(s.id, 'COMENTARIO_RETENIDO', `${retenido} El comentario quedó oculto hasta que soporte lo revise.`, null, false);
+      for (const id of idsDeRol('SOPORTE', 'ADMIN'))
+        notificar(id, 'Comentario por moderar', `El filtro retuvo un comentario de ${req.yo.nombre} (sesión #${s.id}).`, s.id, '/moderacion');
+    }
+    // RN-08: se publican juntas cuando ambas partes ya calificaron.
     const n = uno<{ n: number }>('SELECT COUNT(*) AS n FROM calificaciones WHERE sesion_id = ?', s.id)!.n;
     if (n === 2) {
       ejecutar('UPDATE calificaciones SET publicada = 1 WHERE sesion_id = ?', s.id);
       registrar(s.id, 'CALIFICACIONES_PUBLICADAS', 'Las dos calificaciones se publicaron.');
       notificar(destinatario, 'Calificaciones publicadas', 'Ya puedes ver la calificación que recibiste.', s.id);
+      revisarReputacion(s.tutor_id);
     } else {
       notificar(destinatario, 'Te calificaron', 'Califica tú también para ver el resultado.', s.id);
     }
   });
   avisarSesion(s);
+  res.json({ ...vistaSesion(sesionPorId(s.id), req.yo), comentarioRetenido: retenido });
+});
+
+/** RF-M08-07: quien recibió el comentario lo reporta; queda oculto hasta que soporte o administración lo revisen. */
+api.post('/sesiones/:id/calificacion/reportar', (req, res) => {
+  const s = sesionVisible(req);
+  if (!vistaSesion(s, req.yo).acciones.includes('reportar')) throw new ErrorHttp(409, 'No hay un comentario que puedas reportar en esta sesión.');
+  const motivo = texto(req.body.motivo, 'El motivo del reporte', 10, 300);
+  tx(() => {
+    ejecutar(`UPDATE calificaciones SET moderacion = 'REPORTADA', moderacion_motivo = ?, reportada_por = ?, reportada_en = ?
+              WHERE sesion_id = ? AND destinatario_id = ?`, motivo, req.yo.id, ahoraIso(), s.id, req.yo.id);
+    registrar(s.id, 'COMENTARIO_REPORTADO', `${req.yo.nombre} reportó el comentario que recibió. Queda oculto hasta que soporte lo revise.`, req.yo.id);
+    for (const id of idsDeRol('SOPORTE', 'ADMIN'))
+      notificar(id, 'Comentario reportado', `${req.yo.nombre} reportó un comentario (sesión #${s.id}): ${motivo.slice(0, 80)}`, s.id, '/moderacion');
+  });
+  avisarSesion(s);
   res.json(vistaSesion(sesionPorId(s.id), req.yo));
 });
 
-/* ---------- Disputa (RN-09) ---------- */
+/* ---------- Disputa (RN-09, P-11) ---------- */
 
-api.post('/sesiones/:id/disputa', soloRol('ESTUDIANTE'), (req, res) => {
+/** Cualquiera de las dos partes abre el caso dentro del plazo; el pago queda congelado. */
+api.post('/sesiones/:id/disputa', (req, res) => {
   const s = sesionVisible(req);
   if (!vistaSesion(s, req.yo).acciones.includes('disputa'))
-    throw new ErrorHttp(409, 'El reclamo solo se puede abrir dentro de las 48 horas siguientes a la sesión.');
+    throw new ErrorHttp(409, `El reclamo solo se puede abrir dentro de las ${horasTexto(param('PLAZO_DISPUTA_H'))} siguientes a la sesión.`);
   const motivo = texto(req.body.motivo, 'El motivo', 10, 500);
+  const otro = req.yo.id === s.estudiante_id ? s.tutor_id : s.estudiante_id;
   const did = tx(() => {
     const id = Number(ejecutar('INSERT INTO disputas (sesion_id, autor_id, motivo, creado_en) VALUES (?,?,?,?)',
       s.id, req.yo.id, motivo, ahoraIso()).lastInsertRowid);
     ejecutar(`UPDATE pagos SET estado = 'EN_DISPUTA' WHERE sesion_id = ?`, s.id);
     registrar(s.id, 'DISPUTA_ABIERTA', `${req.yo.nombre} abrió una disputa. El pago queda congelado hasta que soporte la resuelva.`, req.yo.id);
-    notificar(s.tutor_id, 'Abrieron una disputa',
+    notificar(otro, 'Abrieron una disputa',
       `${req.yo.nombre} reportó un problema con la sesión de ${s.materia_nombre}. Entra a la sesión, presenta tu versión y adjunta tus pruebas.`, s.id);
     for (const a of idsDeRol('SOPORTE', 'ADMIN'))
       notificar(a, `Nuevo caso #${id}`, `Sesión #${s.id}, ${s.materia_nombre}: ${motivo.slice(0, 90)}`, s.id, `/casos/${id}`);
@@ -615,6 +733,67 @@ api.post('/notificaciones/leer', (req, res) => {
 
 montarCasos(api);
 
+/* ---------- Moderación de comentarios (RF-M11-05, A1 de P-11) y alertas de reputación (RF-M08-08) ---------- */
+
+const moderacion = express.Router();
+api.use('/gestion/moderacion', soloRol('SOPORTE', 'ADMIN'), moderacion);
+
+const SQL_COMENTARIO = `
+  SELECT c.*, s.materia_id, m.nombre AS materia, a.nombre AS autor_nombre, a.rol AS autor_rol, d.nombre AS dest_nombre, d.rol AS dest_rol,
+         r.nombre AS reporto_nombre, x.nombre AS modero_nombre, x.rol AS modero_rol
+  FROM calificaciones c JOIN sesiones s ON s.id = c.sesion_id JOIN materias m ON m.id = s.materia_id
+  JOIN usuarios a ON a.id = c.autor_id JOIN usuarios d ON d.id = c.destinatario_id
+  LEFT JOIN usuarios r ON r.id = c.reportada_por LEFT JOIN usuarios x ON x.id = c.moderada_por`;
+const vistaComentario = (c: any) => ({
+  id: c.id, sesionId: c.sesion_id, materia: c.materia, puntaje: c.puntaje, comentario: c.comentario, publicada: !!c.publicada,
+  moderacion: c.moderacion, motivo: c.moderacion_motivo, creadoEn: c.creado_en,
+  autor: { id: c.autor_id, nombre: c.autor_nombre, rol: c.autor_rol },
+  destinatario: { id: c.destinatario_id, nombre: c.dest_nombre, rol: c.dest_rol },
+  reportadaPor: c.reporto_nombre ?? null, reportadaEn: c.reportada_en,
+  moderadaPor: c.modero_nombre ? { nombre: c.modero_nombre, rol: c.modero_rol } : null, moderadaEn: c.moderada_en,
+});
+
+moderacion.get('/', (_req, res) => {
+  const umbral = param('UMBRAL_REPUTACION');
+  const minimo = param('MIN_VALORACIONES');
+  res.json({
+    pendientes: todos(`${SQL_COMENTARIO} WHERE c.moderacion IN ('RETENIDA','REPORTADA') ORDER BY COALESCE(c.reportada_en, c.creado_en)`).map(vistaComentario),
+    revisados: todos(`${SQL_COMENTARIO} WHERE c.moderada_en IS NOT NULL ORDER BY c.moderada_en DESC LIMIT 50`).map(vistaComentario),
+    umbral, minimo,
+    // Tutores con suficientes valoraciones y promedio bajo el umbral (A5 de P-08); no se ocultan automáticamente.
+    alertas: todos(`SELECT u.id, u.nombre, t.alerta_reputacion_en AS alertaEn,
+                      ROUND(AVG(c.puntaje), 2) AS promedio, COUNT(c.id) AS valoraciones
+                    FROM tutores t JOIN usuarios u ON u.id = t.usuario_id
+                    JOIN calificaciones c ON c.destinatario_id = u.id AND c.publicada = 1 AND c.moderacion <> 'ELIMINADA'
+                    GROUP BY u.id HAVING COUNT(c.id) >= ? AND AVG(c.puntaje) < ? ORDER BY promedio`, minimo, umbral),
+  });
+});
+
+const DECISION_MODERACION = {
+  APROBAR: { estado: 'VISIBLE', texto: 'aprobó', notif: 'se volvió a publicar' },
+  OCULTAR: { estado: 'OCULTA', texto: 'ocultó', notif: 'quedó oculto del perfil' },
+  ELIMINAR: { estado: 'ELIMINADA', texto: 'eliminó', notif: 'se eliminó y la calificación ya no cuenta en el promedio' },
+} as const;
+
+moderacion.post('/:id', (req, res) => {
+  const c = uno<any>(`${SQL_COMENTARIO} WHERE c.id = ?`, entero(req.params.id, 'El comentario'));
+  if (!c) throw new ErrorHttp(404, 'El comentario no existe.');
+  const decision = opcion(req.body.decision, 'La decisión', ['APROBAR', 'OCULTAR', 'ELIMINAR'] as const);
+  const motivo = texto(req.body.motivo, 'El motivo de la decisión', 5, 300);
+  const d = DECISION_MODERACION[decision];
+  tx(() => {
+    ejecutar(`UPDATE calificaciones SET moderacion = ?, moderacion_motivo = ?, moderada_por = ?, moderada_en = ? WHERE id = ?`,
+      d.estado, motivo, req.yo.id, ahoraIso(), c.id);
+    registrar(c.sesion_id, 'COMENTARIO_MODERADO', `${req.yo.nombre} (${req.yo.rol === 'ADMIN' ? 'administración' : 'soporte'}) ${d.texto} el comentario de ${c.autor_nombre}: ${motivo}`, req.yo.id, false);
+    auditar(req.yo.id, 'COMENTARIO_MODERADO', `${d.texto[0].toUpperCase()}${d.texto.slice(1)} el comentario de ${c.autor_nombre} sobre ${c.dest_nombre} (sesión #${c.sesion_id}): ${motivo}`, c.autor_id);
+    // RF-M11-05: el autor conoce la decisión y su motivo.
+    notificar(c.autor_id, 'Revisamos tu comentario', `Tu comentario de la sesión de ${c.materia} ${d.notif}. Motivo: ${motivo}`, c.sesion_id);
+    if (c.reportada_por) notificar(c.reportada_por, 'Revisamos tu reporte', `El comentario que reportaste ${d.notif}. Motivo: ${motivo}`, c.sesion_id);
+    revisarReputacion(c.destinatario_id);
+  });
+  res.json(vistaComentario(uno(`${SQL_COMENTARIO} WHERE c.id = ?`, c.id)));
+});
+
 /* ---------- Administración (P-02, P-11) y reportes (M12) ---------- */
 
 const admin = express.Router();
@@ -634,6 +813,8 @@ admin.get('/resumen', (_req, res) => {
     disputasEscaladas: n(`SELECT COUNT(*) AS n FROM disputas WHERE estado = 'ESCALADA'`),
     disputasSinAsignar: n(`SELECT COUNT(*) AS n FROM disputas WHERE estado = 'ABIERTA'`),
     solicitudesMateria: n(`SELECT COUNT(*) AS n FROM solicitudes_materia WHERE estado = 'PENDIENTE'`),
+    comentariosPorModerar: n(`SELECT COUNT(*) AS n FROM calificaciones WHERE moderacion IN ('RETENIDA','REPORTADA')`),
+    alertasReputacion: n(`SELECT COUNT(*) AS n FROM tutores WHERE alerta_reputacion_en IS NOT NULL`),
     sesionesTotales: n('SELECT COUNT(*) AS n FROM sesiones'),
     sesionesFinalizadas: n(`SELECT COUNT(*) AS n FROM sesiones WHERE estado = 'FINALIZADA'`),
     volumenPagado: n(`SELECT COALESCE(SUM(monto - reembolso), 0) AS n FROM pagos`),
@@ -786,6 +967,38 @@ admin.get('/auditoria', (req, res) => {
     WHERE a.texto LIKE ? OR u.nombre LIKE ? ORDER BY a.id DESC LIMIT 300`, q, q)
     .map((a) => ({ id: a.id, accion: a.accion, texto: a.texto, fecha: a.fecha,
       actor: { id: a.actorId, nombre: a.actorNombre, superior: !!a.actorSuperior } })));
+});
+
+/* ---------- Parámetros del negocio (RF-M11-07): versionados con fecha de vigencia ---------- */
+
+admin.get('/parametros', (_req, res) => {
+  const ahora = ahoraIso();
+  const historial = todos(`SELECT p.id, p.clave, p.valor, p.vigente_desde AS vigenteDesde, p.motivo, p.creado_en AS creadoEn, u.nombre AS autor
+                           FROM parametros p LEFT JOIN usuarios u ON u.id = p.creado_por ORDER BY p.vigente_desde DESC, p.id DESC`);
+  res.json(PARAMETROS.map((p) => ({
+    ...p, valorInicial: p.valor, valor: param(p.clave),
+    proximo: historial.filter((h) => h.clave === p.clave && h.vigenteDesde > ahora).pop() ?? null,
+    historial: historial.filter((h) => h.clave === p.clave),
+  })));
+});
+
+admin.post('/parametros/:clave', (req, res) => {
+  const def = DEFINICION[req.params.clave as ClaveParametro];
+  if (!def) throw new ErrorHttp(404, 'El parámetro no existe.');
+  const valor = Number(req.body.valor);
+  if (!Number.isFinite(valor) || valor < def.min || valor > def.max || (!('decimales' in def && def.decimales) && !Number.isInteger(valor)))
+    throw new ErrorHttp(400, `El valor debe estar entre ${def.min} y ${def.max}${'decimales' in def && def.decimales ? '' : ' (número entero)'}.`);
+  const motivo = texto(req.body.motivo, 'El motivo del cambio', 5, 300);
+  const desde = req.body.vigenteDesde ? Date.parse(String(req.body.vigenteDesde)) : Date.now();
+  if (Number.isNaN(desde)) throw new ErrorHttp(400, 'La fecha de vigencia no es válida.');
+  if (desde < Date.now() - MIN) throw new ErrorHttp(400, 'La fecha de vigencia no puede estar en el pasado.');
+  const anterior = param(def.clave);
+  tx(() => {
+    ejecutar('INSERT INTO parametros (clave, valor, vigente_desde, motivo, creado_por, creado_en) VALUES (?,?,?,?,?,?)',
+      def.clave, valor, new Date(desde).toISOString(), motivo, req.yo.id, ahoraIso());
+    auditar(req.yo.id, 'PARAMETRO_CAMBIADO', `${def.nombre} (${def.regla}): ${anterior} → ${valor} ${def.unidad}, vigente desde el ${fechaHoraCo(desde)}. ${motivo}`);
+  });
+  res.status(201).json({ clave: def.clave, valor, vigenteDesde: new Date(desde).toISOString() });
 });
 
 /* ---------- Catálogo de materias ---------- */

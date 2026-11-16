@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { duracionTexto, fechaHoraCo, horaCo, pesos } from './formato.js';
+import { PARAMETROS, DEFINICION } from './parametros.js';
 
 const archivo = process.env.DB_PATH ?? path.resolve('data', 'tutoresonline.db');
 fs.mkdirSync(path.dirname(archivo), { recursive: true });
@@ -17,10 +18,10 @@ export const VERSION_TERMINOS = '2026-11-10';
 export const CARPETA_ADJUNTOS = path.join(path.dirname(archivo), 'adjuntos');
 
 // Si la base viene de una versión anterior del esquema se recrea: son datos de demostración.
-const VERSION_ESQUEMA = 5;
+const VERSION_ESQUEMA = 6;
 if ((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version !== VERSION_ESQUEMA) {
   db.exec('PRAGMA foreign_keys = OFF;');
-  for (const t of ['recuperaciones', 'solicitudes_materia', 'auditoria', 'eventos', 'disputa_mensajes', 'adjuntos', 'notificaciones', 'disputas', 'calificaciones', 'pagos',
+  for (const t of ['parametros', 'recuperaciones','solicitudes_materia', 'auditoria', 'eventos', 'disputa_mensajes', 'adjuntos', 'notificaciones', 'disputas', 'calificaciones', 'pagos',
     'demanda_descartes', 'sesiones', 'disponibilidad', 'tutor_materias', 'tutores', 'materias', 'usuarios'])
     db.exec(`DROP TABLE IF EXISTS ${t}`);
   fs.rmSync(CARPETA_ADJUNTOS, { recursive: true, force: true });
@@ -97,7 +98,9 @@ CREATE TABLE IF NOT EXISTS tutores (
   verificacion TEXT NOT NULL DEFAULT 'INCOMPLETO'
     CHECK (verificacion IN ('INCOMPLETO','PENDIENTE','APROBADO','RECHAZADO')),
   motivo_rechazo TEXT,
-  en_linea INTEGER NOT NULL DEFAULT 0
+  en_linea INTEGER NOT NULL DEFAULT 0,
+  -- RF-M08-08: cuándo se alertó al administrador porque el promedio bajó del umbral (se limpia al recuperarse).
+  alerta_reputacion_en TEXT
 );
 CREATE TABLE IF NOT EXISTS tutor_materias (
   tutor_id INTEGER NOT NULL REFERENCES usuarios(id),
@@ -130,6 +133,19 @@ CREATE TABLE IF NOT EXISTS sesiones (
   iniciada_en TEXT,
   finalizada_en TEXT,
   cancelada_por INTEGER,
+  -- Bajo demanda por turnos (RF-M06-03 y RF-M06-05): a quién se le ofrece ahora y hasta cuándo. expira_en es el límite global.
+  turno_tutor_id INTEGER REFERENCES usuarios(id),
+  turno_expira_en TEXT,
+  -- Reprogramación propuesta por una parte y pendiente de la otra (RF-M05-07).
+  repro_inicio TEXT,
+  repro_por INTEGER REFERENCES usuarios(id),
+  repro_en TEXT,
+  -- Recordatorios enviados (RF-M10-04); se limpian al reprogramar.
+  recordatorio_1_en TEXT,
+  recordatorio_2_en TEXT,
+  -- Inasistencia reportada (RF-M07-05): quién faltó y cuándo se cerró la sesión como no realizada.
+  ausente TEXT CHECK (ausente IN ('ESTUDIANTE','TUTOR')),
+  cerrada_en TEXT,
   creado_en TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS demanda_descartes (
@@ -158,9 +174,28 @@ CREATE TABLE IF NOT EXISTS calificaciones (
   puntaje INTEGER NOT NULL CHECK (puntaje BETWEEN 1 AND 5),
   comentario TEXT NOT NULL DEFAULT '',
   publicada INTEGER NOT NULL DEFAULT 0,
+  -- Moderación del comentario (RF-M08-07, RF-M11-05). RETENIDA: la frenó el filtro automático; REPORTADA: la reportó
+  -- quien la recibió. Las dos quedan ocultas hasta que soporte o administración decidan. ELIMINADA no cuenta en el promedio.
+  moderacion TEXT NOT NULL DEFAULT 'VISIBLE' CHECK (moderacion IN ('VISIBLE','RETENIDA','REPORTADA','OCULTA','ELIMINADA')),
+  moderacion_motivo TEXT,
+  reportada_por INTEGER REFERENCES usuarios(id),
+  reportada_en TEXT,
+  moderada_por INTEGER REFERENCES usuarios(id),
+  moderada_en TEXT,
   creado_en TEXT NOT NULL,
   UNIQUE (sesion_id, autor_id)
 );
+-- Parámetros del negocio versionados (RF-M11-07): cada cambio es una fila nueva con su fecha de vigencia.
+CREATE TABLE IF NOT EXISTS parametros (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  clave TEXT NOT NULL,
+  valor REAL NOT NULL,
+  vigente_desde TEXT NOT NULL,
+  motivo TEXT NOT NULL DEFAULT '',
+  creado_por INTEGER REFERENCES usuarios(id),
+  creado_en TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_parametros_clave ON parametros(clave, vigente_desde);
 CREATE TABLE IF NOT EXISTS disputas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   sesion_id INTEGER NOT NULL UNIQUE REFERENCES sesiones(id),
@@ -241,7 +276,8 @@ export const uno = <T = any>(sql: string, ...p: any[]) => db.prepare(sql).get(..
 export const todos = <T = any>(sql: string, ...p: any[]) => db.prepare(sql).all(...p) as T[];
 export const ejecutar = (sql: string, ...p: any[]) => db.prepare(sql).run(...p);
 
-export const COMISION = 0.15; // RN-03
+/** Comisión inicial (RN-03), solo para la semilla. El valor vigente se lee con param('COMISION_PCT'). */
+const COMISION = DEFINICION.COMISION_PCT.valor / 100;
 
 /* ---------- Datos de demostración ---------- */
 
@@ -275,6 +311,9 @@ export function sembrar() {
 
     const rick = usuario('Rick Rios', 'rick@tutores.co', 'ADMIN');
     ejecutar('UPDATE usuarios SET superior = 1 WHERE id = ?', rick);
+    for (const p of PARAMETROS)
+      ejecutar('INSERT INTO parametros (clave, valor, vigente_desde, motivo, creado_por, creado_en) VALUES (?,?,?,?,?,?)',
+        p.clave, p.valor, iso(haceDias(40)), 'Valor inicial definido en el Corte 1.', rick, iso(haceDias(40)));
     const soporte = usuario('Marcela Ruiz', 'soporte@tutores.co', 'SOPORTE');
     const ana = usuario('Ana Martínez', 'ana@demo.co', 'ESTUDIANTE');
     const luis = usuario('Luis Herrera', 'luis@demo.co', 'ESTUDIANTE');
@@ -342,9 +381,9 @@ export function sembrar() {
         ev(sid, 'ACEPTADA', `${t.nombre} aceptó la reserva. Se generó la sala virtual.`, ids[ti], creada + 95 * min);
       } else {
         ev(sid, 'SESION_CREADA', `${nombreEst[est]} pidió un tutor ahora para ${nombreMateria(materia)} (1 h).`, est, creada);
-        ev(sid, 'TUTORES_AVISADOS', 'La solicitud llegó a 3 tutores en línea.', null, creada + 500);
-        ev(sid, 'ACEPTADA', `${t.nombre} tomó la solicitud a los 14 segundos.`, ids[ti], creada + 14000);
-        ev(sid, 'PAGO_COBRADO', `Se cobraron ${pesos(monto)} con TARJETA •••• 4242. El dinero queda retenido por la plataforma.`, null, creada + 14500);
+        ev(sid, 'PAGO_COBRADO', `Se retuvieron ${pesos(monto)} con TARJETA •••• 4242 antes de buscar tutor.`, null, creada + 300);
+        ev(sid, 'TURNO', `Se ofreció la solicitud a ${t.nombre} (candidato 1 de 3, turno de 45 s).`, null, creada + 500, 0);
+        ev(sid, 'ACEPTADA', `${t.nombre} tomó la solicitud a los 14 segundos, en su turno.`, ids[ti], creada + 14000);
       }
     };
     let k = 0;
@@ -365,7 +404,7 @@ export function sembrar() {
       const comision = Math.round(t.tarifa * COMISION);
       const sid = Number(ejecutar(`INSERT INTO sesiones (estudiante_id,tutor_id,materia_id,tipo,estado,inicio,duracion_min,
         modalidad,tema,precio,iniciada_en,finalizada_en,creado_en) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        est, ids[ti], materia, tipo, 'FINALIZADA', iso(inicio), 60, 'VIRTUAL', 'Repaso para parcial', t.tarifa,
+        est, ids[ti], materia, tipo, 'FINALIZADA', iso(inicio), 60, 'VIRTUAL', 'Repaso de los temas del parcial', t.tarifa,
         iso(inicio), iso(fin), iso(new Date(inicio.getTime() - 86400000))).lastInsertRowid);
       ejecutar(`INSERT INTO pagos (sesion_id,monto,comision,neto_tutor,metodo,referencia,estado,liberar_en,creado_en)
         VALUES (?,?,?,?,?,?,?,?,?)`, sid, t.tarifa, comision, t.tarifa - comision, 'TARJETA', `SIM-${1000 + sid}`,
@@ -385,6 +424,20 @@ export function sembrar() {
       if (dias > 2) ev(sid, 'PAGO_LIBERADO', `Pasaron 48 horas sin reclamos: se liberaron ${pesos(t.tarifa - comision)} al tutor.`, null, fin.getTime() + 48 * 60 * min);
       k++;
     }
+
+    // Dos comentarios por moderar (P-11 A1): uno lo retuvo el filtro automático y otro lo reportó el tutor que lo recibió.
+    const ultima = (tutor: number) => uno<{ id: number; sesion_id: number; autor_id: number }>(
+      'SELECT id, sesion_id, autor_id FROM calificaciones WHERE destinatario_id = ? ORDER BY sesion_id DESC LIMIT 1', tutor)!;
+    const jorge = ultima(ids[4]);
+    ejecutar(`UPDATE calificaciones SET comentario = ?, moderacion = 'RETENIDA', moderacion_motivo = ? WHERE id = ?`,
+      'No me gustó la clase. Si quieren detalles escríbanme al 300 555 1234.',
+      'El filtro automático encontró datos personales (un número de teléfono).', jorge.id);
+    ev(jorge.sesion_id, 'COMENTARIO_RETENIDO', 'El filtro automático retuvo el comentario de la calificación y lo envió a moderación.', null, Date.now() - 2 * 86400000, 0);
+    const andres = ultima(ids[2]);
+    ejecutar(`UPDATE calificaciones SET comentario = ?, moderacion = 'REPORTADA', moderacion_motivo = ?, reportada_por = ?, reportada_en = ? WHERE id = ?`,
+      'Llegó tarde y parecía que no había preparado nada. No lo recomiendo para nada.',
+      'El comentario es falso: la sesión empezó a la hora y quedó registrada en el historial.', ids[2], iso(new Date(Date.now() - 3 * 3600000)), andres.id);
+    ev(andres.sesion_id, 'COMENTARIO_REPORTADO', 'Andrés Pardo reportó el comentario que recibió. Queda oculto hasta que soporte lo revise.', ids[2], Date.now() - 3 * 3600000, 0);
     // Dos casos de soporte para la demostración: uno en revisión y otro sin asignar.
     const casos = [
       { est: luis, ti: 2, materia: 4, horasAtras: 27, retraso: 18, dura: 25, asignado: soporte,

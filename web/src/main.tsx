@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -38,6 +38,10 @@ import Casos from './paginas/gestion/Casos';
 import Caso from './paginas/gestion/Caso';
 import SesionesEquipo from './paginas/gestion/Sesiones';
 import SesionEquipo from './paginas/gestion/Sesion';
+import Moderacion from './paginas/gestion/Moderacion';
+import Parametros from './paginas/admin/Parametros';
+// El manual trae los textos del Corte 1 y Mermaid para los diagramas: se carga solo al abrirlo.
+const Manual = lazy(() => import('./paginas/gestion/Manual'));
 
 const consultas = new QueryClient({
   defaultOptions: {
@@ -92,6 +96,8 @@ function Rutas() {
           <Route path="/casos/:id" element={<Caso />} />
           <Route path="/gestion/sesiones" element={<SesionesEquipo />} />
           <Route path="/gestion/sesiones/:id" element={<SesionEquipo />} />
+          <Route path="/moderacion" element={<Moderacion />} />
+          <Route path="/manual" element={<Suspense fallback={<Cargando texto="Abriendo el manual…" />}><Manual /></Suspense>} />
         </>}
         {usuario.rol === 'ADMIN' && <>
           <Route path="/admin" element={<Resumen />} />
@@ -100,6 +106,7 @@ function Rutas() {
           <Route path="/admin/pagos" element={<Pagos />} />
           <Route path="/admin/materias" element={<MateriasAdmin />} />
           <Route path="/admin/actividad" element={<Actividad />} />
+          <Route path="/admin/parametros" element={<Parametros />} />
         </>}
         <Route path="/cuenta" element={<Cuenta />} />
         <Route path="*" element={inicio} />

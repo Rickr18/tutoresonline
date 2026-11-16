@@ -47,7 +47,7 @@ export default function Acceso() {
         <p>Reserva una sesión con un tutor verificado o pide ayuda ahora mismo: el primer tutor disponible que acepte se conecta contigo.</p>
         <ul>
           <li><b>Reserva programada</b><span>Eliges tutor, día y hora según su disponibilidad.</span></li>
-          <li><b>Tutor ahora</b><span>Tu solicitud llega a los tutores en línea y uno la toma en segundos.</span></li>
+          <li><b>Tutor ahora</b><span>Tu solicitud se ofrece a los tutores en línea, uno por uno, hasta que uno la toma.</span></li>
           <li><b>Pago protegido</b><span>El dinero se retiene y se entrega al tutor 48 horas después de la sesión.</span></li>
         </ul>
         <Link to="/descargar" className="acceso-qr">

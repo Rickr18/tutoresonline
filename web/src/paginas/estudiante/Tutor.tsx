@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Col, Descriptions, Flex, Form, Input, List, Row, Segmented, Select, Space, Tag, Typography } from 'antd';
-import { api, type Sesion, type Tutor } from '../../api';
+import { api, type Cotizacion, type Sesion, type Tutor } from '../../api';
+import { useParametros } from '../../comunes';
 import { useSesion } from '../../sesion';
 import { Alerta, Avatar, Campo, Cargando, Estrellas, FormularioPago, Modal, mensajeDe, type DatosPago } from '../../ui';
 import { claveDia, DIAS, dinero, duracion, fecha, fechaLarga, haceCuanto, hora, horaDelDia, MODALIDAD } from '../../formato';
@@ -18,14 +19,21 @@ function Reserva({ tutor, inicio, cerrar }: { tutor: Tutor; inicio: string; cerr
   const [modalidad, setModalidad] = useState<'VIRTUAL' | 'PRESENCIAL'>(tutor.modalidad === 'PRESENCIAL' ? 'PRESENCIAL' : 'VIRTUAL');
   const [tema, setTema] = useState('');
   const [pago, setPago] = useState<DatosPago>({ metodo: 'TARJETA', numero: '' });
-  const total = Math.round((tutor.tarifaHora * duracionMin) / 60);
+  const p = useParametros();
+  // RF-M05-03: el servidor calcula el desglose (tarifa, duración, comisión e impuestos) antes de confirmar.
+  const cotizacion = useQuery({
+    queryKey: ['franjas', 'cotizacion', tutor.id, duracionMin],
+    queryFn: () => api<Cotizacion>(`/tutores/${tutor.id}/cotizacion?duracionMin=${duracionMin}`),
+  });
+  const c = cotizacion.data;
+  const total = c?.total ?? Math.round((tutor.tarifaHora * duracionMin) / 60);
 
   const reservar = useMutation({
     mutationFn: () => api<Sesion>('/sesiones', { tutorId: tutor.id, materiaId, inicio, duracionMin, modalidad, tema: tema.trim(), pago }),
     onSuccess: (s) => {
       cola.invalidateQueries({ queryKey: ['sesiones'] });
       cola.invalidateQueries({ queryKey: ['franjas'] });
-      avisar('Reserva enviada', 'bien', `${tutor.nombre} tiene 12 horas para aceptarla.`);
+      avisar('Reserva enviada', 'bien', `${tutor.nombre} tiene ${p.PLAZO_RESERVA_H} horas para aceptarla.`);
       navegar(`/sesiones/${s.id}`);
     },
   });
@@ -57,17 +65,19 @@ function Reserva({ tutor, inicio, cerrar }: { tutor: Tutor; inicio: string; cerr
               options={(['VIRTUAL', 'PRESENCIAL'] as const).map((m) => ({ value: m, label: MODALIDAD[m] }))} />
           </Campo>
         )}
-        <Campo etiqueta="Tema que quieres trabajar" id="reserva-tema">
-          <Input.TextArea id="reserva-tema" value={tema} onChange={(e) => setTema(e.target.value)} required minLength={3} maxLength={200} autoSize={{ minRows: 2 }}
+        <Campo etiqueta="Tema que quieres trabajar" id="reserva-tema" ayuda="Al menos 20 caracteres, para que el tutor pueda decidir.">
+          <Input.TextArea id="reserva-tema" value={tema} onChange={(e) => setTema(e.target.value)} required minLength={20} maxLength={200} showCount autoSize={{ minRows: 2 }}
             placeholder="Por ejemplo: derivadas por regla de la cadena para el parcial del viernes" />
         </Campo>
         <FormularioPago valor={pago} cambiar={setPago} />
-        <Descriptions size="small" column={1} bordered items={[
-          { key: 'tarifa', label: `${dinero(tutor.tarifaHora)} por hora × ${duracion(duracionMin)}`, children: dinero(total) },
+        <Descriptions size="small" column={1} bordered className="desglose" items={[
+          { key: 'tarifa', label: `Tarifa: ${dinero(tutor.tarifaHora)} por hora × ${duracion(duracionMin)}`, children: dinero(c?.subtotal ?? total) },
+          { key: 'comision', label: `Comisión de la plataforma (${c?.comisionPct ?? p.COMISION_PCT} %)`, children: c ? `${dinero(c.comision)}, incluida: la paga el tutor` : '…' },
+          { key: 'impuestos', label: 'Impuestos', children: dinero(c?.impuestos ?? 0) },
           { key: 'total', label: <b>Total a pagar</b>, children: <b>{dinero(total)}</b> },
         ]} />
         <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-          El pago queda retenido por la plataforma. Si el tutor no acepta en 12 horas o rechaza la solicitud, se te devuelve completo.
+          {c?.impuestosNota} El pago queda retenido por la plataforma. Si el tutor no acepta en {p.PLAZO_RESERVA_H} horas o rechaza la solicitud, se te devuelve completo.
         </Typography.Text>
         {reservar.isError && <Alerta>{mensajeDe(reservar.error)}</Alerta>}
         <Button type="primary" htmlType="submit" block size="large" loading={reservar.isPending}>

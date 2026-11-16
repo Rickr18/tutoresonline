@@ -26,6 +26,8 @@ const MENU: Record<Rol, { a: string; texto: string; fin?: boolean }[]> = {
     { a: '/inicio', texto: 'Inicio' },
     { a: '/casos', texto: 'Casos' },
     { a: '/gestion/sesiones', texto: 'Sesiones' },
+    { a: '/moderacion', texto: 'Moderación' },
+    { a: '/manual', texto: 'Manual' },
   ],
   ADMIN: [
     { a: '/admin', texto: 'Resumen', fin: true },
@@ -35,7 +37,10 @@ const MENU: Record<Rol, { a: string; texto: string; fin?: boolean }[]> = {
     { a: '/admin/usuarios', texto: 'Usuarios' },
     { a: '/admin/pagos', texto: 'Pagos' },
     { a: '/admin/materias', texto: 'Materias' },
+    { a: '/moderacion', texto: 'Moderación' },
     { a: '/admin/actividad', texto: 'Actividad' },
+    { a: '/admin/parametros', texto: 'Parámetros' },
+    { a: '/manual', texto: 'Manual' },
   ],
 };
 

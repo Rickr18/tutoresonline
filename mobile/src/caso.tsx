@@ -27,6 +27,9 @@ const GRUPO: Record<string, string> = {
   CALIFICADA: 'neutro', CALIFICACIONES_PUBLICADAS: 'neutro', DISPUTA_ABIERTA: 'alerta', DESCARGO: 'soporte', PRUEBA_ADJUNTA: 'soporte',
   CASO_TOMADO: 'soporte', CASO_ESCALADO: 'alerta', CASO_RESUELTO: 'soporte', CANCELADA: 'alerta', RECHAZADA: 'alerta',
   VENCIDA: 'alerta', NO_REALIZADA: 'alerta', SIN_TUTOR: 'alerta', SOLICITUD_DESCARTADA: 'neutro', RECORDATORIO: 'inicio',
+  TURNO: 'inicio', TURNO_PASADO: 'neutro', PAGO_AJUSTADO: 'dinero', INASISTENCIA: 'alerta',
+  REPROGRAMACION_PROPUESTA: 'inicio', REPROGRAMADA: 'bien', REPROGRAMACION_RECHAZADA: 'neutro', REPROGRAMACION_RETIRADA: 'neutro',
+  REPROGRAMACION_VENCIDA: 'neutro', COMENTARIO_RETENIDO: 'soporte', COMENTARIO_REPORTADO: 'alerta', COMENTARIO_MODERADO: 'soporte',
 };
 
 export function Historial({ sesionId }: { sesionId: number }) {
@@ -170,7 +173,7 @@ export function CasoDeLaSesion({ s, soyTutor }: { s: Sesion; soyTutor: boolean }
         <Insignia tono={est.tono} texto={d.estado === 'ESCALADA' ? 'En administración' : est.texto} />
       </View>
       <Text style={e.pequeno}>
-        {soyTutor ? `${s.estudiante.nombre} abrió una disputa ${haceCuanto(d.creadoEn)}. ` : `Abriste esta disputa ${haceCuanto(d.creadoEn)}. `}
+        {d.mia ? `Abriste esta disputa ${haceCuanto(d.creadoEn)}. ` : `${d.autor.nombre} abrió una disputa ${haceCuanto(d.creadoEn)}. `}
         {estadoTexto}
       </Text>
       <View style={{ borderLeftWidth: 3, borderLeftColor: C.ambar, paddingLeft: 10 }}>
@@ -191,16 +194,16 @@ export function CasoDeLaSesion({ s, soyTutor }: { s: Sesion; soyTutor: boolean }
 
       <Text style={[e.negrita, { marginTop: 4 }]}>Tu conversación con soporte</Text>
       <Text style={e.pequeno}>
-        {soyTutor
-          ? 'Presenta aquí tu versión y adjunta tus pruebas. El estudiante no ve esta conversación.'
-          : 'Cuéntale a soporte lo que pasó y adjunta tus pruebas. El tutor no ve esta conversación.'}
+        {d.mia
+          ? `Cuéntale a soporte lo que pasó y adjunta tus pruebas. ${soyTutor ? 'El estudiante' : 'El tutor'} no ve esta conversación.`
+          : `Presenta aquí tu versión y adjunta tus pruebas. ${soyTutor ? 'El estudiante' : 'El tutor'} no ve esta conversación.`}
       </Text>
       {mensajes.isPending && <Cargando />}
       {mensajes.isError && <Alerta>{mensajeDe(mensajes.error)}</Alerta>}
-      {mensajes.data?.length === 0 && <Text style={e.tenue}>{soyTutor ? 'Todavía no has presentado tu versión.' : 'Todavía no hay mensajes.'}</Text>}
+      {mensajes.data?.length === 0 && <Text style={e.tenue}>{d.mia ? 'Todavía no hay mensajes.' : 'Todavía no has presentado tu versión.'}</Text>}
       <View style={{ gap: 8 }}>{mensajes.data?.map((m) => <Burbuja key={m.id} m={m} />)}</View>
       {abierto
-        ? <Redactar sesionId={s.id} placeholder={soyTutor ? 'Escribe tu versión de lo que pasó' : 'Escribe a soporte'}
+        ? <Redactar sesionId={s.id} placeholder={d.mia ? 'Escribe a soporte' : 'Escribe tu versión de lo que pasó'}
             alEnviar={(lista) => { cola.setQueryData(['caso-mensajes', s.id], lista); cola.invalidateQueries({ queryKey: ['historial', s.id] }); }} />
         : <Text style={e.pequeno}>El caso está cerrado; la conversación queda como registro.</Text>}
     </View>

@@ -17,6 +17,9 @@ const GRUPO: Record<string, string> = {
   CALIFICADA: 'neutro', CALIFICACIONES_PUBLICADAS: 'neutro', DISPUTA_ABIERTA: 'alerta', DESCARGO: 'soporte', PRUEBA_ADJUNTA: 'soporte',
   CASO_TOMADO: 'soporte', CASO_ESCALADO: 'alerta', CASO_RESUELTO: 'soporte', CANCELADA: 'alerta', RECHAZADA: 'alerta',
   VENCIDA: 'alerta', NO_REALIZADA: 'alerta', SIN_TUTOR: 'alerta', SOLICITUD_DESCARTADA: 'neutro', RECORDATORIO: 'inicio',
+  TURNO: 'inicio', TURNO_PASADO: 'neutro', PAGO_AJUSTADO: 'dinero', INASISTENCIA: 'alerta',
+  REPROGRAMACION_PROPUESTA: 'inicio', REPROGRAMADA: 'bien', REPROGRAMACION_RECHAZADA: 'neutro', REPROGRAMACION_RETIRADA: 'neutro',
+  REPROGRAMACION_VENCIDA: 'neutro', COMENTARIO_RETENIDO: 'soporte', COMENTARIO_REPORTADO: 'alerta', COMENTARIO_MODERADO: 'soporte',
 };
 const COLOR_GRUPO: Record<string, string> = {
   inicio: '#1d4c9a', bien: '#1c8c7c', dinero: '#c97b10', sala: '#0e7490', soporte: '#6d28d9', alerta: '#c0392b', neutro: '#8a94a6',

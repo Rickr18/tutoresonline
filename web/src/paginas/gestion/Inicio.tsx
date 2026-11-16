@@ -22,7 +22,7 @@ function ListaCasos({ casos, vacio }: { casos: Caso[]; vacio: string }) {
           <List.Item.Meta
             title={<>Caso #{c.id} · {c.materia} <Typography.Text type="secondary" style={{ fontWeight: 400 }}>({dinero(c.monto)})</Typography.Text></>}
             description={<>
-              {c.estudiante.nombre} contra {c.tutor.nombre} · {c.tutorRespondio ? 'el tutor ya respondió' : 'el tutor aún no responde'}
+              {c.autor.nombre} contra {c.autor.id === c.estudiante.id ? c.tutor.nombre : c.estudiante.nombre} · {c.contraparteRespondio ? 'la otra parte ya respondió' : 'la otra parte aún no responde'}
               <br />
               <Typography.Text type={atrasado ? 'danger' : 'secondary'} style={{ fontSize: 13 }}>
                 Abierto {haceCuanto(c.creadoEn)} · último movimiento {haceCuanto(c.ultimaActividad)}
