@@ -1,8 +1,9 @@
 import { MarcaLogo } from '../ui';
+import { color } from '../tokens';
 import { Link } from 'react-router-dom';
 import { Alert, Button, Card, Col, Flex, Row, Steps, Typography } from 'antd';
 import { abrirAppMovil, Qr, URL_APK, urlDescarga } from '../qr';
-import { AMBAR, MARINO } from '../tema';
+import { AMBAR } from '../tema';
 
 function dispositivo() {
   const ua = navigator.userAgent;
@@ -46,7 +47,7 @@ export default function Descargar() {
           { title: 'Toca Compartir', content: 'El cuadro con la flecha hacia arriba.' },
           { title: 'Agregar a pantalla de inicio', content: 'Y luego "Agregar".' },
         ]} />
-        <Button block size="large" onClick={abrirAppMovil} style={{ background: MARINO, color: '#fff', borderColor: MARINO }}>Abrir la app</Button>
+        <Button block size="large" onClick={abrirAppMovil} style={{ background: color.marino, color: color.papel, borderColor: color.marino }}>Abrir la app</Button>
       </Card>
     </Col>
   );

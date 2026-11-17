@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Flex, Space, Typography } from 'antd';
-import { SearchOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, SearchOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import type { Sesion } from '../../api';
 import { useSesion } from '../../sesion';
 import { Cabecera, FilaSesion, casoAbierto, useSesiones } from '../../comunes';
@@ -63,7 +63,7 @@ export default function InicioEstudiante() {
 
       {nada && (
         <div className="seccion">
-          <Vacio titulo="No tienes nada pendiente">Busca un tutor por materia o pide ayuda ahora mismo.</Vacio>
+          <Vacio icono={<CheckCircleOutlined />} titulo="No tienes nada pendiente">Busca un tutor por materia o pide ayuda ahora mismo.</Vacio>
         </div>
       )}
 

@@ -1,6 +1,7 @@
 /* Página de inicio pública (/ sin sesión): qué es la plataforma, cómo funciona, materias y tutores destacados.
    Los datos salen de /api/vitrina y /api/materias, que no piden sesión. */
 
+import { color } from '../tokens';
 import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -51,7 +52,7 @@ export default function InicioPublico() {
         <div className="inicio-ancho">
           <EncabezadoPublico clara />
           <div className="inicio-heroe-texto">
-            <Title style={{ color: '#fff', margin: 0 }}>Un tutor para la materia que te está costando.</Title>
+            <Title style={{ color: color.papel, margin: 0 }}>Un tutor para la materia que te está costando.</Title>
             <Paragraph style={{ color: '#c4cfe0', fontSize: 17, margin: '14px 0 26px', maxWidth: 620 }}>
               Reserva una sesión con un tutor verificado o pide ayuda ahora mismo: tu solicitud llega a los tutores en línea y el primero
               que acepta se conecta contigo.
@@ -60,7 +61,7 @@ export default function InicioPublico() {
               <Button type="primary" size="large" icon={<SearchOutlined />} onClick={() => ir('/ingresar?registro=1')}>Buscar tutor</Button>
               <Button size="large" ghost onClick={() => ir('/ingresar?registro=1&rol=TUTOR')}>Quiero ser tutor</Button>
             </Flex>
-            <Text style={{ color: '#9fb0c9', display: 'block', marginTop: 14 }}>¿Ya tienes cuenta? <Link to="/ingresar" style={{ color: '#f2a33a' }}>Ingresa</Link></Text>
+            <Text style={{ color: '#9fb0c9', display: 'block', marginTop: 14 }}>¿Ya tienes cuenta? <Link to="/ingresar" style={{ color: color.ambar }}>Ingresa</Link></Text>
           </div>
         </div>
       </div>

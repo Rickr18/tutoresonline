@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Flex, Space, Typography } from 'antd';
-import { StarFilled } from '@ant-design/icons';
+import { CalendarOutlined, StarFilled, ThunderboltOutlined } from '@ant-design/icons';
 import { api, ErrorApi, type Ingresos, type Sesion, type SolicitudDemanda } from '../../api';
 import { useSesion } from '../../sesion';
 import { Cabecera, FilaSesion, useSesiones } from '../../comunes';
@@ -106,9 +106,9 @@ export default function Panel() {
 
       {aprobado && (
         <Seccion titulo="Solicitudes inmediatas">
-          {!t?.enLinea ? <Vacio titulo="Estás desconectado">Activa el interruptor “En línea” para empezar a recibir solicitudes.</Vacio>
+          {!t?.enLinea ? <Vacio icono={<ThunderboltOutlined />} titulo="Estás desconectado">Activa el interruptor “En línea” para empezar a recibir solicitudes.</Vacio>
             : demanda.isPending ? <Cargando />
-              : demanda.data?.length === 0 ? <Vacio titulo="No hay solicitudes abiertas">Cuando te toque el turno de una solicitud de tus materias, la verás aquí con 45 segundos para aceptarla o pasarla.</Vacio>
+              : demanda.data?.length === 0 ? <Vacio icono={<ThunderboltOutlined />} titulo="No hay solicitudes abiertas">Cuando te toque el turno de una solicitud de tus materias, la verás aquí con 45 segundos para aceptarla o pasarla.</Vacio>
                 : <div className="lista">{demanda.data?.map((d) => <Solicitud key={d.id} d={d} />)}</div>}
         </Seccion>
       )}
@@ -127,14 +127,14 @@ export default function Panel() {
 
       <Seccion titulo="Reservas por aceptar">
         {sesiones.isPending ? <Cargando /> : porAceptar.length === 0
-          ? <Typography.Text type="secondary">No tienes reservas esperando respuesta.</Typography.Text>
+          ? <Vacio icono={<CalendarOutlined />} titulo="No tienes reservas esperando respuesta" />
           : <div className="lista">{porAceptar.map((s) => <FilaSesion key={s.id} s={s} />)}</div>}
       </Seccion>
 
       <Seccion titulo="Próximas sesiones" extra={<Link to="/sesiones">Ver todas</Link>}>
         {sesiones.isError && <Alerta>{mensajeDe(sesiones.error)}</Alerta>}
         {sesiones.data && (proximas.length === 0
-          ? <Typography.Text type="secondary">No tienes sesiones confirmadas.</Typography.Text>
+          ? <Vacio icono={<CalendarOutlined />} titulo="No tienes sesiones confirmadas" />
           : <div className="lista">{proximas.map((s) => <FilaSesion key={s.id} s={s} />)}</div>)}
       </Seccion>
     </>

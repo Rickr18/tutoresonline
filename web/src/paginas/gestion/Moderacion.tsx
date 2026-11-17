@@ -7,6 +7,7 @@ import { api, type ComentarioModeracion, type Moderaciones } from '../../api';
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
 import { Alerta, Campo, Cargando, Estrellas, Insignia, Modal, Vacio, mensajeDe } from '../../ui';
+import { SafetyOutlined } from '@ant-design/icons';
 import { fechaHora, haceCuanto, MODERACION, ROL_TEXTO } from '../../formato';
 
 type Decision = 'APROBAR' | 'OCULTAR' | 'ELIMINAR';
@@ -64,7 +65,7 @@ export default function Moderacion() {
         detalle={<>Comentarios que retuvo el filtro automático o que reportó quien los recibió. <Link to="/manual?tab=guia">Cómo moderar</Link></>} />
       <Space orientation="vertical" size={20} style={{ width: '100%' }}>
         <Card title={`Por revisar (${d.pendientes.length})`} className="moderacion">
-          {d.pendientes.length === 0 ? <Vacio titulo="No hay comentarios por revisar." /> : (
+          {d.pendientes.length === 0 ? <Vacio icono={<SafetyOutlined />} titulo="No hay comentarios por revisar." /> : (
             <Table rowKey="id" pagination={false} dataSource={d.pendientes} columns={[
               { title: 'Estado', key: 'e', width: 170, render: (_, c) => <Insignia tono={MODERACION[c.moderacion].tono}>{MODERACION[c.moderacion].texto}</Insignia> },
               {
@@ -90,7 +91,7 @@ export default function Moderacion() {
         </Card>
 
         <Card title="Alertas de reputación" extra={<Typography.Text type="secondary">Promedio bajo {String(d.umbral).replace('.', ',')} con {d.minimo} valoraciones o más</Typography.Text>}>
-          {d.alertas.length === 0 ? <Vacio titulo="Ningún tutor está bajo el umbral." /> : (
+          {d.alertas.length === 0 ? <Vacio icono={<SafetyOutlined />} titulo="Ningún tutor está bajo el umbral." /> : (
             <Table rowKey="id" pagination={false} dataSource={d.alertas} columns={[
               { title: 'Tutor', dataIndex: 'nombre' },
               { title: 'Promedio', dataIndex: 'promedio', render: (v: number) => <Estrellas valor={v} /> },
@@ -104,7 +105,7 @@ export default function Moderacion() {
         </Card>
 
         <Card title="Revisados recientemente">
-          {d.revisados.length === 0 ? <Vacio titulo="Todavía no hay decisiones." /> : (
+          {d.revisados.length === 0 ? <Vacio icono={<SafetyOutlined />} titulo="Todavía no hay decisiones." /> : (
             <Table rowKey="id" pagination={{ pageSize: 10, showSizeChanger: false }} dataSource={d.revisados} columns={[
               { title: 'Decisión', key: 'e', width: 130, render: (_, c) => <Insignia tono={MODERACION[c.moderacion].tono}>{MODERACION[c.moderacion].texto}</Insignia> },
               { title: 'Comentario', dataIndex: 'comentario' },

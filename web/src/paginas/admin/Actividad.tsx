@@ -1,27 +1,29 @@
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Alert, Flex, Input, Table, Tag, Typography } from 'antd';
+import { Alert, Input, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api, consulta, type EntradaAuditoria } from '../../api';
 import { Cabecera } from '../../comunes';
-import { mensajeDe } from '../../ui';
+import { BarraFiltros, Insignia, Vacio, mensajeDe } from '../../ui';
+import { HistoryOutlined } from '@ant-design/icons';
 import { fechaHora } from '../../formato';
 
 const ACCION: Record<string, { texto: string; color: string }> = {
-  CUENTA_CREADA: { texto: 'Cuenta creada', color: 'blue' },
-  CUENTA_EDITADA: { texto: 'Cuenta editada', color: 'default' },
-  PASSWORD_RESTABLECIDA: { texto: 'Contraseña', color: 'gold' },
-  CUENTA_SUSPENDIDA: { texto: 'Suspensión', color: 'red' },
-  CUENTA_REACTIVADA: { texto: 'Reactivación', color: 'green' },
-  TUTOR_APROBADO: { texto: 'Tutor aprobado', color: 'green' },
-  TUTOR_RECHAZADO: { texto: 'Tutor rechazado', color: 'red' },
-  PAGO_LIBERADO: { texto: 'Pago', color: 'green' },
-  CASO_RESUELTO: { texto: 'Caso', color: 'blue' },
-  MATERIA_CREADA: { texto: 'Materia', color: 'blue' },
-  MATERIA_EDITADA: { texto: 'Materia', color: 'default' },
-  EXPORTACION: { texto: 'Exportación', color: 'default' },
-  SOLICITUD_APROBADA: { texto: 'Solicitud aprobada', color: 'green' },
-  SOLICITUD_RECHAZADA: { texto: 'Solicitud rechazada', color: 'red' },
+  // color: tono de estado (tokens.ts) que se muestra en la insignia.
+  CUENTA_CREADA: { texto: 'Cuenta creada', color: 'activo' },
+  CUENTA_EDITADA: { texto: 'Cuenta editada', color: 'neutro' },
+  PASSWORD_RESTABLECIDA: { texto: 'Contraseña', color: 'espera' },
+  CUENTA_SUSPENDIDA: { texto: 'Suspensión', color: 'mal' },
+  CUENTA_REACTIVADA: { texto: 'Reactivación', color: 'bien' },
+  TUTOR_APROBADO: { texto: 'Tutor aprobado', color: 'bien' },
+  TUTOR_RECHAZADO: { texto: 'Tutor rechazado', color: 'mal' },
+  PAGO_LIBERADO: { texto: 'Pago', color: 'bien' },
+  CASO_RESUELTO: { texto: 'Caso', color: 'activo' },
+  MATERIA_CREADA: { texto: 'Materia', color: 'activo' },
+  MATERIA_EDITADA: { texto: 'Materia', color: 'neutro' },
+  EXPORTACION: { texto: 'Exportación', color: 'neutro' },
+  SOLICITUD_APROBADA: { texto: 'Solicitud aprobada', color: 'bien' },
+  SOLICITUD_RECHAZADA: { texto: 'Solicitud rechazada', color: 'mal' },
 };
 
 const columnas: ColumnsType<EntradaAuditoria> = [
@@ -38,8 +40,8 @@ const columnas: ColumnsType<EntradaAuditoria> = [
   {
     title: 'Tipo', dataIndex: 'accion', width: 150,
     render: (v: string) => {
-      const t = ACCION[v] ?? { texto: v, color: 'default' };
-      return <Tag color={t.color}>{t.texto}</Tag>;
+      const t = ACCION[v] ?? { texto: v, color: 'neutro' };
+      return <Insignia tono={t.color}>{t.texto}</Insignia>;
     },
   },
   { title: 'Detalle', dataIndex: 'texto' },
@@ -57,15 +59,14 @@ export default function Actividad() {
   return (
     <>
       <Cabecera titulo="Actividad" detalle="Lo que hace cada administrador queda registrado aquí con la hora exacta y no se puede borrar." />
-      <Flex gap={12} wrap align="center" style={{ marginBottom: 16 }}>
+      <BarraFiltros contador={registro.data ? `${registro.data.length} registros` : undefined}>
         <Input.Search placeholder="Buscar por administrador o detalle" allowClear value={q} onChange={(e) => setQ(e.target.value)}
           style={{ maxWidth: 360 }} aria-label="Buscar" />
-        {registro.data && <Typography.Text type="secondary">{registro.data.length} registros</Typography.Text>}
-      </Flex>
+      </BarraFiltros>
       {registro.isError && <Alert type="error" showIcon title={mensajeDe(registro.error)} style={{ marginBottom: 16 }} />}
       <Table rowKey="id" columns={columnas} dataSource={registro.data ?? []} loading={registro.isPending} size="middle"
         pagination={{ pageSize: 25, hideOnSinglePage: true }} scroll={{ x: 'max-content' }}
-        locale={{ emptyText: 'Sin actividad todavía. Las acciones sobre usuarios, pagos, casos y materias aparecerán aquí.' }} />
+        locale={{ emptyText: <Vacio titulo="Sin actividad todavía" icono={<HistoryOutlined />}>Las acciones sobre usuarios, pagos, casos y materias aparecerán aquí.</Vacio> }} />
     </>
   );
 }

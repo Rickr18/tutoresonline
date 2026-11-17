@@ -104,6 +104,18 @@ export function Kpis({ children }: { children: ReactNode }) {
   return <div className="kpis">{children}</div>;
 }
 
+/** Barra de filtros de las listas del equipo: búsqueda y selectores a la izquierda, contador a la derecha. */
+export function BarraFiltros({ children, contador }: { children: ReactNode; contador?: ReactNode }) {
+  return (
+    <Card size="small" className="barra-filtros" style={{ margin: '16px 0' }}>
+      <Flex gap={12} wrap align="center">
+        {children}
+        {contador && <Typography.Text type="secondary" style={{ marginLeft: 'auto' }}>{contador}</Typography.Text>}
+      </Flex>
+    </Card>
+  );
+}
+
 export function Modal({ titulo, cerrar, children, ancho }: { titulo: string; cerrar: () => void; children: ReactNode; ancho?: number }) {
   return (
     <ModalAntd open title={titulo} onCancel={cerrar} footer={null} width={ancho ?? 480} destroyOnHidden className="modal">

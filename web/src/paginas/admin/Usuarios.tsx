@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Avatar, Button, Checkbox, Flex, Form, Input, Modal, Radio, Select, Space, Table, Tag, Typography } from 'antd';
+import { Alert, Avatar, Button, Checkbox, Form, Input, Modal, Radio, Select, Space, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api, consulta, descargar, type Rol, type UsuarioAdmin } from '../../api';
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
-import { mensajeDe } from '../../ui';
+import { BarraFiltros, Insignia, Kpi, Kpis, Vacio, mensajeDe } from '../../ui';
+import { TeamOutlined } from '@ant-design/icons';
 import { color } from '../../tokens';
 import { fecha, iniciales } from '../../formato';
 import { MARINO } from '../../tema';
@@ -158,7 +159,8 @@ export default function Usuarios() {
     },
   });
   const exportar = useMutation({ mutationFn: () => descargar('/admin/exportar/usuarios.csv', 'usuarios.csv') });
-  const lista = (usuarios.data ?? []).filter((u) => !rol || u.rol === rol);
+  const todos = usuarios.data ?? [];
+  const lista = todos.filter((u) => !rol || u.rol === rol);
   const [editando, setEditando] = useState<UsuarioAdmin | null>(null);
   const [clave, setClave] = useState<UsuarioAdmin | null>(null);
   const [creando, setCreando] = useState(false);
@@ -173,13 +175,13 @@ export default function Usuarios() {
         </Space>
       ),
     },
-    { title: 'Rol', key: 'rol', render: (_, u) => (u.superior ? <Tag color="gold">Principal</Tag> : ROL[u.rol]) },
+    { title: 'Rol', key: 'rol', render: (_, u) => (u.superior ? <Insignia tono="espera">Principal</Insignia> : ROL[u.rol]) },
     { title: 'Registro', dataIndex: 'creadoEn', render: (v: string) => fecha(v), responsive: ['md'] },
     {
       title: 'Estado', key: 'estado',
       render: (_, u) => (
         <Space orientation="vertical" size={0}>
-          <Tag color={u.estado === 'ACTIVO' ? 'green' : 'red'}>{u.estado === 'ACTIVO' ? 'Activo' : 'Suspendido'}</Tag>
+          <Insignia tono={u.estado === 'ACTIVO' ? 'bien' : 'mal'}>{u.estado === 'ACTIVO' ? 'Activo' : 'Suspendido'}</Insignia>
           {u.debeCambiarPassword && <Typography.Text type="secondary" style={{ fontSize: 12 }}>Clave temporal</Typography.Text>}
         </Space>
       ),
@@ -211,7 +213,14 @@ export default function Usuarios() {
         <Button loading={exportar.isPending} onClick={() => exportar.mutate()}>Exportar CSV</Button>
         <Button type="primary" onClick={() => setCreando(true)}>Crear cuenta del equipo</Button>
       </Cabecera>
-      <Flex gap={12} wrap align="center" style={{ marginBottom: 16 }}>
+      <Kpis>
+        <Kpi fuerte etiqueta="Usuarios" valor={todos.length} nota="cuentas registradas" />
+        <Kpi etiqueta="Estudiantes" valor={todos.filter((u) => u.rol === 'ESTUDIANTE').length} />
+        <Kpi etiqueta="Tutores" valor={todos.filter((u) => u.rol === 'TUTOR').length} />
+        <Kpi etiqueta="Equipo" valor={todos.filter((u) => u.rol === 'SOPORTE' || u.rol === 'ADMIN').length} nota="soporte y administración" />
+        <Kpi etiqueta="Suspendidos" valor={todos.filter((u) => u.estado === 'SUSPENDIDO').length} />
+      </Kpis>
+      <BarraFiltros contador={`${lista.length} usuarios`}>
         <Input.Search placeholder="Buscar por nombre o correo" allowClear value={q} onChange={(e) => setQ(e.target.value)}
           style={{ maxWidth: 320 }} aria-label="Buscar" />
         <Select value={rol} onChange={setRol} style={{ width: 200 }} aria-label="Rol" options={[
@@ -221,15 +230,14 @@ export default function Usuarios() {
           { value: 'SOPORTE', label: 'Soporte' },
           { value: 'ADMIN', label: 'Administradores' },
         ]} />
-        <Typography.Text type="secondary">{lista.length} usuarios</Typography.Text>
-      </Flex>
+      </BarraFiltros>
       <Space orientation="vertical" style={{ width: '100%' }}>
         {usuarios.isError && <Alert type="error" showIcon title={mensajeDe(usuarios.error)} />}
         {cambiar.isError && <Alert type="error" showIcon title={mensajeDe(cambiar.error)} />}
         {exportar.isError && <Alert type="error" showIcon title={mensajeDe(exportar.error)} />}
         <Table rowKey="id" columns={columnas} dataSource={lista} loading={usuarios.isPending} size="middle"
           pagination={{ pageSize: 20, hideOnSinglePage: true }} scroll={{ x: 'max-content' }}
-          locale={{ emptyText: 'Ningún usuario coincide' }} />
+          locale={{ emptyText: <Vacio titulo="Ningún usuario coincide" icono={<TeamOutlined />} /> }} />
       </Space>
       {editando && <ModalEditar u={editando} cerrar={() => setEditando(null)} />}
       {clave && <ModalClave u={clave} cerrar={() => setClave(null)} />}

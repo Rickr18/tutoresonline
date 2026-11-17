@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Flex, Select, Table, Typography } from 'antd';
+import { Button, Select, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api, descargar, type EstadoPago, type PagoAdmin } from '../../api';
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
-import { Alerta, Insignia, mensajeDe } from '../../ui';
+import { Alerta, BarraFiltros, Insignia, Kpi, Kpis, Vacio, mensajeDe } from '../../ui';
+import { WalletOutlined } from '@ant-design/icons';
 import { dinero, ESTADO_PAGO, fecha, fechaHora } from '../../formato';
 
 const sub = (texto: React.ReactNode) => <><br /><Typography.Text type="secondary" style={{ fontSize: 13 }}>{texto}</Typography.Text></>;
@@ -48,15 +49,20 @@ export default function Pagos() {
         <Button loading={exportar.isPending} onClick={() => exportar.mutate()}>Exportar CSV</Button>
       </Cabecera>
       {exportar.isError && <Alerta>{mensajeDe(exportar.error)}</Alerta>}
-      <Flex gap={12} wrap align="center" style={{ marginBottom: 16 }}>
+      <Kpis>
+        <Kpi fuerte etiqueta="Cobrado" valor={dinero(suma((p) => p.monto))} nota={`${lista.length} pagos`} />
+        <Kpi etiqueta="Comisión" valor={dinero(suma((p) => p.comision))} nota="de la plataforma" />
+        <Kpi etiqueta="Retenido" valor={dinero(lista.filter((p) => p.estado === 'RETENIDO').reduce((n, p) => n + p.monto, 0))} nota="esperando la garantía" />
+        <Kpi etiqueta="En disputa" valor={dinero(lista.filter((p) => p.estado === 'EN_DISPUTA').reduce((n, p) => n + p.monto, 0))} nota="congelado" />
+      </Kpis>
+      <BarraFiltros contador={`${lista.length} pagos`}>
         <Select value={estado} onChange={setEstado} aria-label="Estado del pago" style={{ width: 220 }}
           options={[{ value: '', label: 'Todos los estados' }, ...(Object.keys(ESTADO_PAGO) as EstadoPago[]).map((e) => ({ value: e, label: ESTADO_PAGO[e].texto }))]} />
-        <Typography.Text type="secondary">{lista.length} pagos · {dinero(suma((p) => p.monto))} cobrados · {dinero(suma((p) => p.comision))} de comisión</Typography.Text>
-      </Flex>
+      </BarraFiltros>
       {pagos.isError && <Alerta>{mensajeDe(pagos.error)}</Alerta>}
       {liberar.isError && <Alerta>{mensajeDe(liberar.error)}</Alerta>}
       <Table rowKey="id" columns={columnas} dataSource={lista} loading={pagos.isPending} size="middle" scroll={{ x: 'max-content' }}
-        pagination={{ pageSize: 25, hideOnSinglePage: true }} locale={{ emptyText: 'No hay pagos con este estado' }} />
+        pagination={{ pageSize: 25, hideOnSinglePage: true }} locale={{ emptyText: <Vacio titulo="No hay pagos con este estado" icono={<WalletOutlined />} /> }} />
     </>
   );
 }

@@ -5,7 +5,8 @@ import { Button, Card, Col, Descriptions, Flex, Form, Input, List, Row, Segmente
 import { api, type Cotizacion, type Sesion, type Tutor } from '../../api';
 import { useParametros } from '../../comunes';
 import { useSesion } from '../../sesion';
-import { Alerta, Avatar, Campo, Cargando, Estrellas, FormularioPago, Modal, mensajeDe, type DatosPago } from '../../ui';
+import { Alerta, Avatar, Campo, Cargando, Estrellas, FormularioPago, Modal, Pulso, mensajeDe, type DatosPago } from '../../ui';
+import { color } from '../../tokens';
 import { claveDia, DIAS, dinero, duracion, fecha, fechaLarga, haceCuanto, hora, horaDelDia, MODALIDAD } from '../../formato';
 
 const DURACIONES = [60, 90, 120];
@@ -126,7 +127,7 @@ export default function PerfilTutor() {
                     <Estrellas valor={t.calificacion} total={t.totalCalificaciones} />
                     <Typography.Text type="secondary">{t.sesionesRealizadas} sesiones realizadas</Typography.Text>
                     <Typography.Text type="secondary">{t.ciudad} · {MODALIDAD[t.modalidad]}</Typography.Text>
-                    {t.enLinea && <Typography.Text style={{ color: '#1c8c7c', fontWeight: 600 }}>● En línea</Typography.Text>}
+                    {t.enLinea && <Flex gap={6} align="center"><Pulso /><Typography.Text style={{ color: color.verde, fontWeight: 600 }}>En línea</Typography.Text></Flex>}
                   </Flex>
                 </div>
               </Flex>

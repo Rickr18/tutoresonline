@@ -5,6 +5,7 @@ import { Button, Card, Col, Descriptions, Flex, Row, Space, Statistic, Typograph
 import type { SesionEquipo } from '../../api';
 import { EnlaceSala } from '../../caso';
 import { Insignia } from '../../ui';
+import { color } from '../../tokens';
 import { dinero, duracion, ESTADO_PAGO, ESTADO_SESION, fechaHora, hora } from '../../formato';
 
 function diferencia(min: number | null) {
@@ -36,14 +37,14 @@ export function FichaSesion({ s, enlaceDetalle }: { s: SesionEquipo; enlaceDetal
         ]} />
         <Row gutter={[12, 12]} className="tiempos">
           <Col xs={24} sm={12}>
-            <Card size="small" style={{ background: '#f7f9fc', height: '100%' }}>
+            <Card size="small" style={{ background: color.fondo, height: '100%' }}>
               <Statistic title="Programada" value={t.programadoInicio ? `${fechaHora(t.programadoInicio)} – ${hora(t.programadoFin!)}` : 'Sin hora fija'}
                 styles={{ content: { fontSize: 16, fontWeight: 600 } }} />
               <Typography.Text type="secondary" style={{ fontSize: 13 }}>{duracion(s.duracionMin)} reservada</Typography.Text>
             </Card>
           </Col>
           <Col xs={24} sm={12}>
-            <Card size="small" style={{ background: '#f7f9fc', height: '100%' }}>
+            <Card size="small" style={{ background: color.fondo, height: '100%' }}>
               <Statistic title="Real" value={t.realInicio ? `${fechaHora(t.realInicio)} – ${t.realFin ? hora(t.realFin) : 'en curso'}` : 'No se inició'}
                 styles={{ content: { fontSize: 16, fontWeight: 600 } }} />
               <Flex gap={6} wrap align="center">

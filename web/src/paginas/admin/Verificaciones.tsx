@@ -5,6 +5,8 @@ import { api, type Tutor, type Verificacion } from '../../api';
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
 import { Alerta, Avatar, Campo, Cargando, Estrellas, Insignia, Modal, Vacio, mensajeDe } from '../../ui';
+import { IdcardOutlined } from '@ant-design/icons';
+import { TONOS } from '../../tokens';
 import { dinero, MODALIDAD, VERIFICACION } from '../../formato';
 
 const PESTANAS: Verificacion[] = ['PENDIENTE', 'APROBADO', 'RECHAZADO', 'INCOMPLETO'];
@@ -36,12 +38,12 @@ export default function Verificaciones() {
       <Cabecera titulo="Verificación de tutores" detalle="Revisa la presentación, las materias y el soporte de estudios antes de publicar un perfil." />
       <Tabs activeKey={pestana} onChange={(k) => setPestana(k as Verificacion)} items={PESTANAS.map((v) => ({
         key: v,
-        label: <Flex gap={8} align="center">{VERIFICACION[v].texto}<Badge count={cuenta(v)} showZero color="#e9edf3" style={{ color: '#4a5567' }} /></Flex>,
+        label: <Flex gap={8} align="center">{VERIFICACION[v].texto}<Badge count={cuenta(v)} showZero color="var(--gris)" style={{ color: TONOS.neutro.texto }} /></Flex>,
       }))} />
       {todos.isPending && <Cargando />}
       {todos.isError && <Alerta>{mensajeDe(todos.error)}</Alerta>}
       {verificar.isError && !rechazando && <Alerta>{mensajeDe(verificar.error)}</Alerta>}
-      {todos.data && lista.length === 0 && <Vacio titulo={pestana === 'PENDIENTE' ? 'No hay perfiles por revisar' : 'No hay perfiles en este estado'} />}
+      {todos.data && lista.length === 0 && <Vacio icono={<IdcardOutlined />} titulo={pestana === 'PENDIENTE' ? 'No hay perfiles por revisar' : 'No hay perfiles en este estado'} />}
       <Row gutter={[16, 16]}>
         {lista.map((t) => {
           const v = VERIFICACION[t.verificacion ?? 'INCOMPLETO'];

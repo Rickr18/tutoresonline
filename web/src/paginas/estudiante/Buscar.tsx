@@ -5,6 +5,7 @@ import { Button, Card, Checkbox, Col, Flex, Input, Row, Select, Tag, Typography 
 import { api, consulta, type Tutor } from '../../api';
 import { Cabecera, useMaterias } from '../../comunes';
 import { Alerta, Avatar, Campo, Cargando, Estrellas, Pulso, Vacio, mensajeDe } from '../../ui';
+import { SearchOutlined } from '@ant-design/icons';
 import { color } from '../../tokens';
 import { dinero, MODALIDAD } from '../../formato';
 
@@ -96,7 +97,7 @@ export default function Buscar() {
       {tutores.isPending && <Cargando />}
       {tutores.isError && <Alerta>{mensajeDe(tutores.error)}</Alerta>}
       {tutores.data?.length === 0 && (
-        <Vacio titulo="Ningún tutor coincide con la búsqueda">Prueba con otra materia o quita algún filtro.</Vacio>
+        <Vacio icono={<SearchOutlined />} titulo="Ningún tutor coincide con la búsqueda">Prueba con otra materia o quita algún filtro.</Vacio>
       )}
       <Row gutter={[16, 16]}>
         {tutores.data?.map((t) => <Col key={t.id} xs={24} md={12} xl={8}><TarjetaTutor t={t} /></Col>)}

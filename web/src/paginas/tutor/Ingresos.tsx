@@ -4,7 +4,9 @@ import { Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api, type Ingresos as TIngresos } from '../../api';
 import { Cabecera } from '../../comunes';
-import { Alerta, Cargando, Insignia, Kpi, Kpis, mensajeDe } from '../../ui';
+import { Alerta, Cargando, Insignia, Kpi, Kpis, Vacio, mensajeDe } from '../../ui';
+import { WalletOutlined } from '@ant-design/icons';
+
 import { dinero, ESTADO_PAGO, fecha, fechaHora } from '../../formato';
 
 type Movimiento = TIngresos['movimientos'][number];
@@ -51,7 +53,7 @@ export default function Ingresos() {
           <section className="seccion">
             <Typography.Title level={4}>Movimientos</Typography.Title>
             <Table rowKey="id" columns={columnas} dataSource={d.movimientos} size="middle" scroll={{ x: 'max-content' }}
-              pagination={{ pageSize: 20, hideOnSinglePage: true }} locale={{ emptyText: 'Todavía no tienes movimientos' }} />
+              pagination={{ pageSize: 20, hideOnSinglePage: true }} locale={{ emptyText: <Vacio icono={<WalletOutlined />} titulo="Todavía no tienes movimientos">Cuando termines una sesión, el pago aparece aquí.</Vacio> }} />
           </section>
         </>
       )}

@@ -5,6 +5,7 @@ import type { EstadoSesion, Sesion } from '../api';
 import { useSesion } from '../sesion';
 import { Cabecera, FilaSesion, casoAbierto, useSesiones } from '../comunes';
 import { Alerta, Cargando, Vacio, mensajeDe } from '../ui';
+import { CalendarOutlined } from '@ant-design/icons';
 import { color, TONOS } from '../tokens';
 
 const ACTIVAS: EstadoSesion[] = ['PENDIENTE_ACEPTACION', 'BUSCANDO_TUTOR', 'CONFIRMADA', 'EN_CURSO'];
@@ -37,8 +38,8 @@ export default function Sesiones() {
       {sesiones.isPending && <Cargando />}
       {sesiones.isError && <Alerta>{mensajeDe(sesiones.error)}</Alerta>}
       {sesiones.data && lista.length === 0 && (pestana === 'activas'
-        ? <Vacio titulo="No tienes sesiones activas">{soyTutor ? 'Las solicitudes que recibas aparecen aquí y en el inicio.' : 'Busca un tutor y reserva, o pide ayuda ahora mismo.'}</Vacio>
-        : <Vacio titulo="Todavía no hay sesiones en el historial" />)}
+        ? <Vacio icono={<CalendarOutlined />} titulo="No tienes sesiones activas">{soyTutor ? 'Las solicitudes que recibas aparecen aquí y en el inicio.' : 'Busca un tutor y reserva, o pide ayuda ahora mismo.'}</Vacio>
+        : <Vacio icono={<CalendarOutlined />} titulo="Todavía no hay sesiones en el historial" />)}
       <div className="lista">{lista.map((s) => <FilaSesion key={s.id} s={s} />)}</div>
     </>
   );

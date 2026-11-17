@@ -1,17 +1,19 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Card, Col, Empty, List, Row, Typography } from 'antd';
+import { Button, Card, Col, List, Row, Typography } from 'antd';
+import { CustomerServiceOutlined } from '@ant-design/icons';
+
 import { api, type Caso } from '../../api';
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
-import { Alerta, Cargando, Insignia, Kpi, Kpis, mensajeDe } from '../../ui';
+import { Alerta, Cargando, Insignia, Kpi, Kpis, Vacio, mensajeDe } from '../../ui';
 import { dinero, ESTADO_CASO, haceCuanto } from '../../formato';
 
 const HORA = 3_600_000;
 
 function ListaCasos({ casos, vacio }: { casos: Caso[]; vacio: string }) {
   const ir = useNavigate();
-  if (!casos.length) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={vacio} />;
+  if (!casos.length) return <Vacio icono={<CustomerServiceOutlined />} titulo={vacio} />;
   return (
     <List dataSource={casos} renderItem={(c) => {
       const e = ESTADO_CASO[c.estado];
