@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Button, Card, Checkbox, Drawer, Flex, Input, Select, Table, Typography } from 'antd';
+import { Button, Card, Checkbox, Drawer, Flex, Input, Select, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api, consulta, type EstadoSesion, type SesionListaEquipo } from '../../api';
 import { Cabecera, cuando } from '../../comunes';
-import { Alerta, Insignia, Kpi, Kpis, mensajeDe } from '../../ui';
+import { Alerta, Insignia, Kpi, Kpis, mensajeDe, Tabla } from '../../ui';
 import { dinero, duracion, ESTADO_CASO, ESTADO_SESION } from '../../formato';
 import { DetalleSesionEquipo } from './Sesion';
 
@@ -50,6 +50,7 @@ export default function SesionesEquipo() {
     refetchInterval: 15_000,
   });
   const lista = (sesiones.data ?? []).filter((s) => (!tipo || s.tipo === tipo) && (!conCaso || s.disputaId));
+  const n = (v: number) => (sesiones.isPending ? '—' : v);
   const enCurso = lista.filter((s) => s.estado === 'EN_CURSO').length;
   const esperando = lista.filter((s) => ESPERANDO.includes(s.estado)).length;
   const casosAbiertos = lista.filter((s) => s.disputaId && s.estadoDisputa !== 'RESUELTA').length;
@@ -58,10 +59,10 @@ export default function SesionesEquipo() {
     <>
       <Cabecera titulo="Sesiones" detalle="Todas las reservas y solicitudes inmediatas. Abre una para ver qué pasó, con la hora exacta de cada paso." />
       <Kpis>
-        <Kpi etiqueta="En curso" valor={enCurso} nota="ahora mismo" fuerte />
-        <Kpi etiqueta="Esperando tutor" valor={esperando} nota="reservas y solicitudes" />
-        <Kpi etiqueta="Con caso abierto" valor={casosAbiertos} nota="pago congelado" />
-        <Kpi etiqueta="Sesiones" valor={lista.length} nota="con estos filtros" />
+        <Kpi etiqueta="En curso" valor={n(enCurso)} nota="ahora mismo" fuerte />
+        <Kpi etiqueta="Esperando tutor" valor={n(esperando)} nota="reservas y solicitudes" />
+        <Kpi etiqueta="Con caso abierto" valor={n(casosAbiertos)} nota="pago congelado" />
+        <Kpi etiqueta="Sesiones" valor={n(lista.length)} nota="con estos filtros" />
       </Kpis>
       <Card size="small" style={{ margin: '16px 0' }}>
         <Flex gap={12} wrap align="center">
@@ -71,11 +72,11 @@ export default function SesionesEquipo() {
           <Select value={tipo} onChange={setTipo} aria-label="Tipo" style={{ width: 240 }}
             options={[{ value: '', label: 'Programadas y bajo demanda' }, { value: 'PROGRAMADA', label: 'Programadas' }, { value: 'BAJO_DEMANDA', label: 'Bajo demanda' }]} />
           <Checkbox checked={conCaso} onChange={(e) => setConCaso(e.target.checked)}>Solo con caso de soporte</Checkbox>
-          <Typography.Text type="secondary" style={{ marginLeft: 'auto' }}>{lista.length} sesiones</Typography.Text>
+          <Typography.Text type="secondary" style={{ marginLeft: 'auto' }}>{sesiones.isPending ? '' : `${lista.length} sesiones`}</Typography.Text>
         </Flex>
       </Card>
       {sesiones.isError && <Alerta>{mensajeDe(sesiones.error)}</Alerta>}
-      <Table rowKey="id" columns={columnas} dataSource={lista} loading={sesiones.isPending} size="middle" scroll={{ x: 'max-content' }}
+      <Tabla rowKey="id" columns={columnas} dataSource={lista} cargando={sesiones.isPending} size="middle" scroll={{ x: 'max-content' }}
         pagination={{ pageSize: 25, hideOnSinglePage: true }} locale={{ emptyText: 'No hay sesiones con estos filtros' }}
         rowClassName={() => 'fila-clic'}
         onRow={(s) => ({

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Alert, Input, Table, Typography } from 'antd';
+import { Alert, Input, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api, consulta, type EntradaAuditoria } from '../../api';
 import { Cabecera } from '../../comunes';
-import { BarraFiltros, Insignia, Vacio, mensajeDe } from '../../ui';
+import { BarraFiltros, Insignia, Vacio, mensajeDe, Tabla } from '../../ui';
 import { HistoryOutlined } from '@ant-design/icons';
 import { fechaHora } from '../../formato';
 
@@ -64,7 +64,7 @@ export default function Actividad() {
           style={{ maxWidth: 360 }} aria-label="Buscar" />
       </BarraFiltros>
       {registro.isError && <Alert type="error" showIcon title={mensajeDe(registro.error)} style={{ marginBottom: 16 }} />}
-      <Table rowKey="id" columns={columnas} dataSource={registro.data ?? []} loading={registro.isPending} size="middle"
+      <Tabla rowKey="id" columns={columnas} dataSource={registro.data ?? []} cargando={registro.isPending} size="middle"
         pagination={{ pageSize: 25, hideOnSinglePage: true }} scroll={{ x: 'max-content' }}
         locale={{ emptyText: <Vacio titulo="Sin actividad todavía" icono={<HistoryOutlined />}>Las acciones sobre usuarios, pagos, casos y materias aparecerán aquí.</Vacio> }} />
     </>

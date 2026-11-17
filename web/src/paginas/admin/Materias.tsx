@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, AutoComplete, Badge, Button, Flex, Form, Input, Modal, Space, Table, Tabs, Tag, Typography } from 'antd';
+import { Alert, AutoComplete, Badge, Button, Flex, Form, Input, Modal, Space, Tabs, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api, type MateriaAdmin, type SolicitudMateria } from '../../api';
 import SolicitudesAdmin from './SolicitudesMateria';
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
-import { mensajeDe } from '../../ui';
+import { mensajeDe, Tabla } from '../../ui';
 
 type Formulario = { nombre: string; area: string };
 
@@ -90,7 +90,7 @@ export default function Materias() {
         { key: 'solicitudes', label: <Flex gap={8} align="center">Solicitudes de tutores<Badge count={pendientes} /></Flex> },
       ]} />
       {pestana === 'catalogo'
-        ? <Table rowKey="id" columns={columnas} dataSource={materias.data ?? []} loading={materias.isPending} size="middle"
+        ? <Tabla rowKey="id" columns={columnas} dataSource={materias.data ?? []} cargando={materias.isPending} size="middle"
           pagination={false} scroll={{ x: 'max-content' }} />
         : <SolicitudesAdmin solicitudes={solicitudes.data ?? []} cargando={solicitudes.isPending} areas={areas} />}
       {editando !== undefined && (

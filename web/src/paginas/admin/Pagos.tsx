@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Select, Table, Typography } from 'antd';
+import { Button, Select, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api, descargar, type EstadoPago, type PagoAdmin } from '../../api';
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
-import { Alerta, BarraFiltros, Insignia, Kpi, Kpis, Vacio, mensajeDe } from '../../ui';
+import { Alerta, BarraFiltros, Insignia, Kpi, Kpis, Vacio, mensajeDe, Tabla } from '../../ui';
 import { WalletOutlined } from '@ant-design/icons';
 import { dinero, ESTADO_PAGO, fecha, fechaHora } from '../../formato';
 
@@ -24,6 +24,7 @@ export default function Pagos() {
   const exportar = useMutation({ mutationFn: () => descargar('/admin/exportar/pagos.csv', 'pagos.csv') });
   const lista = (pagos.data ?? []).filter((p) => !estado || p.estado === estado);
   const suma = (f: (p: PagoAdmin) => number) => lista.reduce((n, p) => n + f(p), 0);
+  const m = (v: number) => (pagos.isPending ? '—' : dinero(v));
 
   const columnas: ColumnsType<PagoAdmin> = [
     { title: 'Referencia', key: 'ref', render: (_, p) => <><b className="nums">{p.referencia}</b>{sub(`${p.metodo} · ${fecha(p.fecha)}`)}</> },
@@ -50,10 +51,10 @@ export default function Pagos() {
       </Cabecera>
       {exportar.isError && <Alerta>{mensajeDe(exportar.error)}</Alerta>}
       <Kpis>
-        <Kpi fuerte etiqueta="Cobrado" valor={dinero(suma((p) => p.monto))} nota={`${lista.length} pagos`} />
-        <Kpi etiqueta="Comisión" valor={dinero(suma((p) => p.comision))} nota="de la plataforma" />
-        <Kpi etiqueta="Retenido" valor={dinero(lista.filter((p) => p.estado === 'RETENIDO').reduce((n, p) => n + p.monto, 0))} nota="esperando la garantía" />
-        <Kpi etiqueta="En disputa" valor={dinero(lista.filter((p) => p.estado === 'EN_DISPUTA').reduce((n, p) => n + p.monto, 0))} nota="congelado" />
+        <Kpi fuerte etiqueta="Cobrado" valor={m(suma((p) => p.monto))} nota={`${lista.length} pagos`} />
+        <Kpi etiqueta="Comisión" valor={m(suma((p) => p.comision))} nota="de la plataforma" />
+        <Kpi etiqueta="Retenido" valor={m(lista.filter((p) => p.estado === 'RETENIDO').reduce((n, p) => n + p.monto, 0))} nota="esperando la garantía" />
+        <Kpi etiqueta="En disputa" valor={m(lista.filter((p) => p.estado === 'EN_DISPUTA').reduce((n, p) => n + p.monto, 0))} nota="congelado" />
       </Kpis>
       <BarraFiltros contador={`${lista.length} pagos`}>
         <Select value={estado} onChange={setEstado} aria-label="Estado del pago" style={{ width: 220 }}
@@ -61,7 +62,7 @@ export default function Pagos() {
       </BarraFiltros>
       {pagos.isError && <Alerta>{mensajeDe(pagos.error)}</Alerta>}
       {liberar.isError && <Alerta>{mensajeDe(liberar.error)}</Alerta>}
-      <Table rowKey="id" columns={columnas} dataSource={lista} loading={pagos.isPending} size="middle" scroll={{ x: 'max-content' }}
+      <Tabla rowKey="id" columns={columnas} dataSource={lista} cargando={pagos.isPending} size="middle" scroll={{ x: 'max-content' }}
         pagination={{ pageSize: 25, hideOnSinglePage: true }} locale={{ emptyText: <Vacio titulo="No hay pagos con este estado" icono={<WalletOutlined />} /> }} />
     </>
   );

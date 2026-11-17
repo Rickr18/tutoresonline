@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Avatar, Button, Checkbox, Form, Input, Modal, Radio, Select, Space, Table, Typography } from 'antd';
+import { Alert, Avatar, Button, Checkbox, Form, Input, Modal, Radio, Select, Space, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api, consulta, descargar, type Rol, type UsuarioAdmin } from '../../api';
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
-import { BarraFiltros, Insignia, Kpi, Kpis, Vacio, mensajeDe } from '../../ui';
+import { BarraFiltros, Insignia, Kpi, Kpis, Vacio, mensajeDe, Tabla } from '../../ui';
 import { TeamOutlined } from '@ant-design/icons';
 import { color } from '../../tokens';
 import { fecha, iniciales } from '../../formato';
@@ -160,6 +160,7 @@ export default function Usuarios() {
   });
   const exportar = useMutation({ mutationFn: () => descargar('/admin/exportar/usuarios.csv', 'usuarios.csv') });
   const todos = usuarios.data ?? [];
+  const n = (v: number) => (usuarios.isPending ? '—' : v);
   const lista = todos.filter((u) => !rol || u.rol === rol);
   const [editando, setEditando] = useState<UsuarioAdmin | null>(null);
   const [clave, setClave] = useState<UsuarioAdmin | null>(null);
@@ -214,11 +215,11 @@ export default function Usuarios() {
         <Button type="primary" onClick={() => setCreando(true)}>Crear cuenta del equipo</Button>
       </Cabecera>
       <Kpis>
-        <Kpi fuerte etiqueta="Usuarios" valor={todos.length} nota="cuentas registradas" />
-        <Kpi etiqueta="Estudiantes" valor={todos.filter((u) => u.rol === 'ESTUDIANTE').length} />
-        <Kpi etiqueta="Tutores" valor={todos.filter((u) => u.rol === 'TUTOR').length} />
-        <Kpi etiqueta="Equipo" valor={todos.filter((u) => u.rol === 'SOPORTE' || u.rol === 'ADMIN').length} nota="soporte y administración" />
-        <Kpi etiqueta="Suspendidos" valor={todos.filter((u) => u.estado === 'SUSPENDIDO').length} />
+        <Kpi fuerte etiqueta="Usuarios" valor={n(todos.length)} nota="cuentas registradas" />
+        <Kpi etiqueta="Estudiantes" valor={n(todos.filter((u) => u.rol === 'ESTUDIANTE').length)} />
+        <Kpi etiqueta="Tutores" valor={n(todos.filter((u) => u.rol === 'TUTOR').length)} />
+        <Kpi etiqueta="Equipo" valor={n(todos.filter((u) => u.rol === 'SOPORTE' || u.rol === 'ADMIN').length)} nota="soporte y administración" />
+        <Kpi etiqueta="Suspendidos" valor={n(todos.filter((u) => u.estado === 'SUSPENDIDO').length)} />
       </Kpis>
       <BarraFiltros contador={`${lista.length} usuarios`}>
         <Input.Search placeholder="Buscar por nombre o correo" allowClear value={q} onChange={(e) => setQ(e.target.value)}
@@ -235,7 +236,7 @@ export default function Usuarios() {
         {usuarios.isError && <Alert type="error" showIcon title={mensajeDe(usuarios.error)} />}
         {cambiar.isError && <Alert type="error" showIcon title={mensajeDe(cambiar.error)} />}
         {exportar.isError && <Alert type="error" showIcon title={mensajeDe(exportar.error)} />}
-        <Table rowKey="id" columns={columnas} dataSource={lista} loading={usuarios.isPending} size="middle"
+        <Tabla rowKey="id" columns={columnas} dataSource={lista} cargando={usuarios.isPending} size="middle"
           pagination={{ pageSize: 20, hideOnSinglePage: true }} scroll={{ x: 'max-content' }}
           locale={{ emptyText: <Vacio titulo="Ningún usuario coincide" icono={<TeamOutlined />} /> }} />
       </Space>

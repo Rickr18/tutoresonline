@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Badge, Flex, Table, Tabs, Typography } from 'antd';
+import { Badge, Flex, Tabs, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api, type Caso } from '../../api';
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
-import { Alerta, Insignia, mensajeDe } from '../../ui';
+import { Alerta, Insignia, mensajeDe, Tabla } from '../../ui';
 import { color, TONOS } from '../../tokens';
 import { DECISION, dinero, ESTADO_CASO, haceCuanto, ROL_TEXTO } from '../../formato';
 
@@ -73,7 +73,7 @@ export default function Casos() {
         }))} />
 
       {casos.isError && <Alerta>{mensajeDe(casos.error)}</Alerta>}
-      <Table rowKey="id" columns={columnas} dataSource={visibles} loading={casos.isPending} size="middle" scroll={{ x: 'max-content' }}
+      <Tabla rowKey="id" columns={columnas} dataSource={visibles} cargando={casos.isPending} size="middle" scroll={{ x: 'max-content' }}
         pagination={{ pageSize: 20, hideOnSinglePage: true }} locale={{ emptyText: 'No hay casos en esta bandeja' }}
         rowClassName={() => 'fila-clic'}
         onRow={(c) => ({

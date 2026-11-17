@@ -1,6 +1,7 @@
 /* Componentes de interfaz compartidos, construidos sobre Ant Design. Conservan la misma API que usan las páginas. */
 import { cloneElement, useEffect, useState, type ReactElement, type ReactNode } from 'react';
-import { Alert, Avatar as AvatarAntd, Card, Empty, Flex, Form, Input, Modal as ModalAntd, Progress, Rate, Segmented, Spin, Statistic, Tag, Typography } from 'antd';
+import type { TableProps } from 'antd';
+import { Alert, Avatar as AvatarAntd, Card, Table, Empty, Flex, Form, Input, Modal as ModalAntd, Progress, Rate, Segmented, Spin, Statistic, Tag, Typography } from 'antd';
 import { StarFilled, InboxOutlined } from '@ant-design/icons';
 import { iniciales } from './formato';
 import { AMBAR, MARINO } from './tema';
@@ -102,6 +103,25 @@ export function Kpi({ etiqueta, valor, nota, fuerte }: { etiqueta: ReactNode; va
 /** Rejilla de indicadores que se acomoda al ancho disponible. */
 export function Kpis({ children }: { children: ReactNode }) {
   return <div className="kpis">{children}</div>;
+}
+
+/**
+ * Tabla de antd que, mientras llegan los datos, muestra filas de esqueleto con el brillo ámbar de la marca
+ * en vez del velo blanco desenfocado del Spin de antd (que sobre una tabla vacía se ve borroso).
+ */
+export function Tabla<T extends object>({ cargando, ...props }: TableProps<T> & { cargando?: boolean }) {
+  if (cargando) {
+    return (
+      <div className="tabla-cargando" role="status" aria-label="Cargando datos">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="fila-esqueleto" aria-hidden>
+            <span className="e-circulo" /><span className="e-linea larga" /><span className="e-linea" /><span className="e-linea corta" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <Table<T> {...props} />;
 }
 
 /** Barra de filtros de las listas del equipo: búsqueda y selectores a la izquierda, contador a la derecha. */

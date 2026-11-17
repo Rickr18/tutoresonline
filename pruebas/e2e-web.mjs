@@ -27,7 +27,12 @@ async function abrir(email) {
   await p.locator('.barra').waitFor();
   return p;
 }
-const foto = (p, nombre, completa = false) => p.screenshot({ path: `${DIR}/${nombre}.png`, fullPage: completa });
+// Antes de capturar se espera a que no queden tablas ni indicadores cargando: así la captura no sale con el velo de carga.
+const foto = async (p, nombre, completa = false) => {
+  await p.locator('.tabla-cargando, .ant-spin-spinning, .cargando').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+  await p.waitForTimeout(350);
+  return p.screenshot({ path: `${DIR}/${nombre}.png`, fullPage: completa });
+};
 // Elige una opción en un Select de Ant Design: abre la lista, escribe para filtrar y hace clic en la opción.
 async function elegir(p, etiqueta, opcion) {
   const campo = p.getByLabel(etiqueta, { exact: true });
