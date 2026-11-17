@@ -63,13 +63,14 @@ function Pestanas({ rol }: { rol: Exclude<Rol, 'ADMIN' | 'SOPORTE'> }) {
   const margen = useSafeAreaInsets();
   const { data } = useQuery({ queryKey: ['notificaciones'], queryFn: () => api<Notificaciones>('/notificaciones'), refetchInterval: 60_000 });
   return (
-    <View style={{ flexDirection: 'row', backgroundColor: C.marino, paddingBottom: margen.bottom, paddingTop: 6 }} accessibilityRole="tablist">
+    <View style={{ flexDirection: 'row', backgroundColor: C.marino, paddingBottom: margen.bottom, paddingTop: 8 }} accessibilityRole="tablist">
       {PESTANAS[rol].map((p) => {
         const activa = nav.pestana === p.clave;
         const globo = p.clave === 'cuenta' && data?.sinLeer ? data.sinLeer : 0;
         return (
           <Pressable key={p.clave} onPress={() => nav.cambiarPestana(p.clave)} accessibilityRole="tab" accessibilityState={{ selected: activa }} accessibilityLabel={p.texto}
-            style={{ flex: 1, alignItems: 'center', paddingVertical: 6, gap: 2 }}>
+            style={{ flex: 1, alignItems: 'center', paddingVertical: 6, gap: 2, minHeight: 48 }}>
+            <View style={{ position: 'absolute', top: -6, width: 28, height: 3, borderRadius: 2, backgroundColor: activa ? C.ambar : 'transparent' }} />
             <Ionicons name={p.icono} size={22} color={activa ? C.ambar : '#9fb0c9'} />
             <Text style={{ fontSize: 11.5, fontWeight: '700', color: activa ? '#fff' : '#9fb0c9' }}>{p.texto}</Text>
             {globo > 0 && (

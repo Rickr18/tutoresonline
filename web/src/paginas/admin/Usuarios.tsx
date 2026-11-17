@@ -6,6 +6,7 @@ import { api, consulta, descargar, type Rol, type UsuarioAdmin } from '../../api
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
 import { mensajeDe } from '../../ui';
+import { color } from '../../tokens';
 import { fecha, iniciales } from '../../formato';
 import { MARINO } from '../../tema';
 
@@ -167,7 +168,7 @@ export default function Usuarios() {
       title: 'Usuario', key: 'usuario',
       render: (_, u) => (
         <Space>
-          <Avatar style={{ background: '#e9edf3', color: MARINO, fontWeight: 700 }}>{iniciales(u.nombre)}</Avatar>
+          <Avatar style={{ background: color.gris, color: MARINO, fontWeight: 700 }}>{iniciales(u.nombre)}</Avatar>
           <span><Typography.Text strong>{u.nombre}</Typography.Text><br /><Typography.Text type="secondary">{u.email}</Typography.Text></span>
         </Space>
       ),

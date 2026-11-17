@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, alPerderSesion, tokenGuardado, type Usuario } from './api';
 
@@ -28,6 +29,10 @@ export function useSesion() {
 
 export function ProveedorSesion({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
+  // useNavigate cambia de identidad en cada navegación; la referencia mantiene estables los callbacks que dependen de él.
+  const ir = useNavigate();
+  const irRef = useRef(ir);
+  irRef.current = ir;
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [cargando, setCargando] = useState(() => !!tokenGuardado.leer());
   const [enVivo, setEnVivo] = useState(false);
@@ -44,11 +49,18 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
 
   const avisar = useCallback<Contexto['avisar']>((titulo, tono = 'info', cuerpo) => mostrar({ titulo, tono, cuerpo }), [mostrar]);
 
-  const salir = useCallback(() => {
+  /**
+   * Cierra la sesión: corta las consultas en curso, borra el token, vacía la caché privada y el estado del usuario
+   * y deja la URL en `destino` reemplazando el historial, para que Atrás no devuelva una pantalla privada.
+   */
+  const cerrarSesion = useCallback((destino: string) => {
+    void qc.cancelQueries();
     tokenGuardado.borrar();
     setUsuario(null);
     qc.clear();
+    irRef.current(destino, { replace: true });
   }, [qc]);
+  const salir = useCallback(() => cerrarSesion('/'), [cerrarSesion]);
 
   const refrescar = useCallback(async () => {
     setUsuario(await api<Usuario>('/yo'));
@@ -67,10 +79,11 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
 
   // Recupera la sesión guardada al abrir la página.
   useEffect(() => {
-    alPerderSesion(salir);
+    // Un 401 (token vencido o invalidado) lleva a la pantalla de acceso.
+    alPerderSesion(() => cerrarSesion('/ingresar'));
     if (!tokenGuardado.leer()) return;
     api<Usuario>('/yo').then(setUsuario).catch(() => tokenGuardado.borrar()).finally(() => setCargando(false));
-  }, [salir]);
+  }, [cerrarSesion]);
 
   // Canal en tiempo real: el servidor avisa y la pantalla vuelve a pedir solo lo que cambió.
   const usuarioId = usuario?.id;

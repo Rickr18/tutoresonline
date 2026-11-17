@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 import { useMutation } from '@tanstack/react-query';
 import { almacen, api, ErrorApi, ES_WEB, SERVIDOR_POR_DEFECTO, type Usuario } from '../api';
 import { useSesion } from '../sesion';
-import { Alerta, Boton, Campo, Segmentos, mensajeDe } from '../ui';
+import { Alerta, Boton, Campo, MarcaLogo, Segmentos, mensajeDe } from '../ui';
 import { C, e } from '../tema';
 import Recuperar from './Recuperar';
 import { AvisoInstalar, EnlaceVersionWeb } from '../instalar';
@@ -50,10 +50,7 @@ export default function Acceso() {
         <View style={{ padding: 24, paddingTop: 36, gap: 12 }}>
           <Pressable style={e.fila} accessibilityLabel="TutoresOn-Line"
             onPress={() => { const n = toquesLogo + 1; setToquesLogo(n); if (n >= 5) setAjustesServidor(true); }}>
-            <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: C.ambar, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontWeight: '900', fontSize: 20, color: C.marino }}>T</Text>
-            </View>
-            <Text style={{ color: '#fff', fontSize: 21, fontWeight: '800' }}>Tutores<Text style={{ color: C.ambar }}>On-Line</Text></Text>
+            <MarcaLogo />
           </Pressable>
           <Text style={{ color: '#fff', fontSize: 25, fontWeight: '800', lineHeight: 31 }}>Un tutor para la materia que te está costando.</Text>
           <Text style={{ color: '#c4cfe0', fontSize: 15, lineHeight: 21 }}>Reserva con un tutor verificado o pide ayuda ahora: el primer tutor disponible que acepte se conecta contigo.</Text>

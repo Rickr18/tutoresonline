@@ -6,6 +6,7 @@ import { api, type Canal, type CasoDetalle, type Decision } from '../../api';
 import { useSesion } from '../../sesion';
 import { Conversacion, EnlaceSala, LineaTiempo } from '../../caso';
 import { Alerta, Campo, Cargando, Insignia, Modal, mensajeDe } from '../../ui';
+import { color, TONOS } from '../../tokens';
 import { DECISION, dinero, ESTADO_CASO, fechaHora, haceCuanto, ROL_TEXTO } from '../../formato';
 import { FichaSesion } from './piezas';
 
@@ -72,7 +73,7 @@ export default function Caso() {
         <Space wrap className="acciones">
           <Insignia tono={e.tono}>{e.texto}</Insignia>
           {p.tomar && (
-            <Button size="small" style={{ background: '#12233f', color: '#fff', borderColor: '#12233f' }} loading={accion.isPending && accion.variables?.ruta === 'tomar'}
+            <Button size="small" style={{ background: color.marino, color: '#fff', borderColor: color.marino }} loading={accion.isPending && accion.variables?.ruta === 'tomar'}
               onClick={() => accion.mutate({ ruta: 'tomar' })}>{c.asignado ? 'Tomar el caso yo' : 'Tomar el caso'}</Button>
           )}
           {p.escribir && <Button size="small" onClick={() => abrir('sala')}>{c.sala ? 'Nueva sala de mediación' : 'Videollamada de mediación'}</Button>}
@@ -123,7 +124,7 @@ export default function Caso() {
           <Card className="conversaciones" style={{ position: 'sticky', top: 16 }}>
             <Tabs activeKey={canal} onChange={(k) => setCanal(k as Canal)} items={CANALES.map((x) => ({
               key: x.canal,
-              label: <Flex gap={8} align="center">{x.texto}<Badge count={c.mensajes.filter((m) => m.canal === x.canal).length} showZero color="#e9edf3" style={{ color: '#4a5567' }} /></Flex>,
+              label: <Flex gap={8} align="center">{x.texto}<Badge count={c.mensajes.filter((m) => m.canal === x.canal).length} showZero color={color.gris} style={{ color: TONOS.neutro.texto }} /></Flex>,
             }))} />
             <Typography.Paragraph type="secondary" style={{ fontSize: 13 }}>{CANALES.find((x) => x.canal === canal)!.ayuda}</Typography.Paragraph>
             <Conversacion key={canal} mensajes={delCanal} enviar={enviar} puedeEscribir={p.escribir} vistaEquipo
@@ -172,7 +173,7 @@ export default function Caso() {
             <Radio.Group className="opciones-decision" value={decision} onChange={(ev) => setDecision(ev.target.value)} aria-label="Decisión"
               style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {(Object.keys(DECISION) as Decision[]).map((d) => (
-                <Card key={d} size="small" style={{ borderColor: decision === d ? '#12233f' : undefined, cursor: 'pointer' }} onClick={() => setDecision(d)}>
+                <Card key={d} size="small" style={{ borderColor: decision === d ? color.marino : undefined, cursor: 'pointer' }} onClick={() => setDecision(d)}>
                   <Radio value={d}>
                     <b>{DECISION[d].texto}</b><br />
                     <Typography.Text type="secondary" style={{ fontSize: 13 }}>{efectos[d]}</Typography.Text>

@@ -1,6 +1,6 @@
 import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, matchPath, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConfigProvider } from 'antd';
 import es_ES from 'antd/locale/es_ES';
@@ -11,6 +11,7 @@ import { ProveedorSesion, useSesion } from './sesion';
 import Marco, { Avisos } from './Marco';
 import { Cargando } from './ui';
 import Acceso from './paginas/Acceso';
+import NoEncontrada from './paginas/NoEncontrada';
 import Descargar from './paginas/Descargar';
 import Recuperar from './paginas/Recuperar';
 import { Privacidad, Terminos } from './paginas/Legal';
@@ -54,6 +55,18 @@ const consultas = new QueryClient({
 
 const INICIO: Record<Rol, string> = { ESTUDIANTE: '/inicio', TUTOR: '/panel', SOPORTE: '/inicio', ADMIN: '/admin' };
 
+/** Rutas privadas de cada rol: sirven para distinguir un 403 (ruta de otro rol) de un 404 (ruta inexistente). El servidor sigue validando los permisos. */
+const COMUNES_EQUIPO = ['/casos', '/casos/:id', '/gestion/sesiones', '/gestion/sesiones/:id', '/moderacion', '/manual'];
+const RUTAS: Record<Rol, string[]> = {
+  ESTUDIANTE: ['/inicio', '/buscar', '/tutores/:id', '/ahora', '/sesiones', '/sesiones/:id', '/cuenta'],
+  TUTOR: ['/panel', '/perfil', '/agenda', '/ingresos', '/sesiones', '/sesiones/:id', '/cuenta'],
+  SOPORTE: ['/inicio', ...COMUNES_EQUIPO, '/cuenta'],
+  ADMIN: ['/admin', '/admin/verificaciones', '/admin/usuarios', '/admin/pagos', '/admin/materias', '/admin/actividad', '/admin/parametros', ...COMUNES_EQUIPO, '/cuenta'],
+};
+const coincide = (rutas: string[], ruta: string) => rutas.some((r) => matchPath({ path: r, end: true }, ruta));
+/** Rutas que no son una pantalla sino un punto de entrada: llevan al inicio del rol. */
+const ENTRADAS = ['/', '/ingresar'];
+
 function Rutas() {
   const { usuario, cargando } = useSesion();
   const { pathname } = useLocation();
@@ -70,7 +83,6 @@ function Rutas() {
   if (!usuario) return <Routes><Route path="/" element={<InicioPublico />} /><Route path="*" element={<Acceso />} /></Routes>;
   if (usuario.debeCambiarPassword) return <CambioObligatorio />;
 
-  const inicio = <Navigate to={INICIO[usuario.rol]} replace />;
   return (
     <Routes>
       <Route element={<Marco />}>
@@ -109,10 +121,18 @@ function Rutas() {
           <Route path="/admin/parametros" element={<Parametros />} />
         </>}
         <Route path="/cuenta" element={<Cuenta />} />
-        <Route path="*" element={inicio} />
+        <Route path="*" element={<Desconocida rol={usuario.rol} inicio={INICIO[usuario.rol]} />} />
       </Route>
     </Routes>
   );
+}
+
+function Desconocida({ rol, inicio }: { rol: Rol; inicio: string }) {
+  const { pathname } = useLocation();
+  // El administrador no tiene /inicio (es /admin): se trata como alias.
+  if (ENTRADAS.includes(pathname) || (rol === 'ADMIN' && pathname === '/inicio')) return <Navigate to={inicio} replace />;
+  const deOtroRol = (Object.keys(RUTAS) as Rol[]).some((r) => r !== rol && coincide(RUTAS[r], pathname));
+  return <NoEncontrada prohibida={deOtroRol} inicio={inicio} />;
 }
 
 createRoot(document.getElementById('raiz')!).render(

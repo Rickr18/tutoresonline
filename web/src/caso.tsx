@@ -5,6 +5,7 @@ import { Button, Divider, Flex, Image, Input, Tag, Timeline, Typography, Upload 
 import { FilePdfOutlined, PaperClipOutlined } from '@ant-design/icons';
 import { api, subirAdjunto, urlAdjunto, TIPOS_ADJUNTO, type Evento, type Mensaje } from './api';
 import { Alerta, mensajeDe } from './ui';
+import { evento } from './tokens';
 import { fecha, horaExacta, ROL_TEXTO, tamanoArchivo } from './formato';
 
 /* ---------- Línea de tiempo ---------- */
@@ -21,9 +22,7 @@ const GRUPO: Record<string, string> = {
   REPROGRAMACION_PROPUESTA: 'inicio', REPROGRAMADA: 'bien', REPROGRAMACION_RECHAZADA: 'neutro', REPROGRAMACION_RETIRADA: 'neutro',
   REPROGRAMACION_VENCIDA: 'neutro', COMENTARIO_RETENIDO: 'soporte', COMENTARIO_REPORTADO: 'alerta', COMENTARIO_MODERADO: 'soporte',
 };
-const COLOR_GRUPO: Record<string, string> = {
-  inicio: '#1d4c9a', bien: '#1c8c7c', dinero: '#c97b10', sala: '#0e7490', soporte: '#6d28d9', alerta: '#c0392b', neutro: '#8a94a6',
-};
+const COLOR_GRUPO: Record<string, string> = evento;
 
 export function LineaTiempo({ eventos, vacio = 'Todavía no hay movimientos.' }: { eventos: Evento[]; vacio?: string }) {
   if (!eventos.length) return <Typography.Text type="secondary">{vacio}</Typography.Text>;
@@ -124,6 +123,7 @@ export function Conversacion({ mensajes, enviar, puedeEscribir, placeholder, vac
           return (
             <div key={m.id} className={`burbuja${m.mio ? ' mia' : ''}${equipo && !m.mio ? ' equipo' : ''}${m.canal === 'INTERNO' ? ' interna' : ''}`}>
               <small>{nombre} · {fecha(m.fecha)}, {horaExacta(m.fecha)}</small>
+              {m.canal === 'INTERNO' && <span className="rotulo nota-interna">Nota interna</span>}
               {m.texto && <p>{m.texto}</p>}
               {m.adjunto && <VistaAdjunto a={m.adjunto} />}
             </div>

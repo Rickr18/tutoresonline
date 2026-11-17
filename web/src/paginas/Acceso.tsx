@@ -5,7 +5,7 @@ import { Qr, urlDescarga } from '../qr';
 import { api, type Usuario } from '../api';
 import { useSesion } from '../sesion';
 import { Button, Checkbox, Flex, Form, Input, Segmented, Tabs, Typography } from 'antd';
-import { Alerta, Campo, mensajeDe } from '../ui';
+import { MarcaLogo, Alerta, Campo, mensajeDe } from '../ui';
 
 const DEMOS = [
   { rol: 'Estudiante', email: 'ana@demo.co' },
@@ -40,8 +40,7 @@ export default function Acceso() {
     <div className="acceso">
       <section className="acceso-marca">
         <div className="marca clara">
-          <span className="logo">T</span>
-          <span className="nombre">Tutores<em>On-Line</em></span>
+          <MarcaLogo clara />
         </div>
         <h1>Un tutor para la materia que te está costando.</h1>
         <p>Reserva una sesión con un tutor verificado o pide ayuda ahora mismo: el primer tutor disponible que acepte se conecta contigo.</p>

@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api, type Materia, type Parametros, type Sesion } from './api';
 import { useSesion } from './sesion';
 import { useNav } from './nav';
-import { Avatar, Insignia } from './ui';
+import { Avatar, Insignia, RielSesion } from './ui';
+import { Ionicons } from '@expo/vector-icons';
 import { C, e } from './tema';
 import { dinero, duracion, ESTADO_SESION, fechaHora } from './formato';
 
@@ -33,19 +34,14 @@ export function cuando(s: Sesion) {
   return s.inicio ? fechaHora(s.inicio) : `Pedida ${fechaHora(s.creadoEn).toLowerCase()}`;
 }
 
-/** Pantalla con desplazamiento, título y gesto de “jalar para actualizar”. */
+/** Pantalla con desplazamiento, título y gesto de “jalar para actualizar”. Con `atras` lleva una cabecera fija para volver. */
 export function Pantalla({ titulo, detalle, atras, refrescando, alRefrescar, children, accion }: {
   titulo: string; detalle?: string; atras?: boolean; refrescando?: boolean; alRefrescar?: () => void; children: ReactNode; accion?: ReactNode;
 }) {
   const nav = useNav();
-  return (
+  const cuerpo = (
     <ScrollView style={e.pantalla} contentContainerStyle={e.contenido} keyboardShouldPersistTaps="handled"
       refreshControl={alRefrescar ? <RefreshControl refreshing={!!refrescando} onRefresh={alRefrescar} colors={[C.marino]} /> : undefined}>
-      {atras && (
-        <Pressable onPress={nav.atras} accessibilityRole="button" hitSlop={8} style={{ alignSelf: 'flex-start' }}>
-          <Text style={{ color: C.marino, fontWeight: '700', fontSize: 15 }}>← Volver</Text>
-        </Pressable>
-      )}
       <View style={[e.entre, { alignItems: 'flex-start' }]}>
         <View style={{ flex: 1 }}>
           <Text style={e.titulo}>{titulo}</Text>
@@ -55,6 +51,19 @@ export function Pantalla({ titulo, detalle, atras, refrescando, alRefrescar, chi
       </View>
       {children}
     </ScrollView>
+  );
+  if (!atras) return cuerpo;
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ backgroundColor: C.papel, borderBottomWidth: 1, borderBottomColor: C.linea, paddingHorizontal: 12, paddingVertical: 6 }}>
+        <Pressable onPress={nav.atras} accessibilityRole="button" accessibilityLabel="← Volver" hitSlop={8}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, alignSelf: 'flex-start' }}>
+          <Ionicons name="arrow-back" size={20} color={C.marino} />
+          <Text style={{ color: C.marino, fontWeight: '700', fontSize: 15 }}>Volver</Text>
+        </Pressable>
+      </View>
+      {cuerpo}
+    </View>
   );
 }
 
@@ -67,9 +76,10 @@ export function FilaSesion({ s }: { s: Sesion }) {
   const soyTutor = usuario?.rol === 'TUTOR';
   const otro = soyTutor ? s.estudiante.nombre : s.tutor?.nombre ?? 'Tutor por asignar';
   const est = ESTADO_SESION[s.estado];
+  const pideAccion = s.acciones.some((a) => ['aceptar', 'iniciar', 'calificar', 'responder-reprogramacion'].includes(a));
   return (
     <Pressable onPress={() => nav.ir({ nombre: 'sesion', id: s.id })} accessibilityRole="button"
-      style={({ pressed }) => [e.tarjeta, { padding: 13, flexDirection: 'row', gap: 12, alignItems: 'center', opacity: pressed ? 0.8 : 1 }]}>
+      style={({ pressed }) => [e.tarjeta, { padding: 13, flexDirection: 'row', gap: 12, alignItems: 'center', opacity: pressed ? 0.8 : 1 }, pideAccion && { borderLeftWidth: 4, borderLeftColor: C.ambar }]}>
       <Avatar nombre={otro} />
       <View style={{ flex: 1, gap: 2 }}>
         <View style={e.entre}>
@@ -81,6 +91,7 @@ export function FilaSesion({ s }: { s: Sesion }) {
           <Text style={e.pequeno}>{cuando(s)} · {duracion(s.duracionMin)}{s.tipo === 'BAJO_DEMANDA' ? ' · Ahora' : ''}</Text>
           <Insignia tono={est.tono} texto={est.texto} />
         </View>
+        <RielSesion tipo={s.tipo} estado={s.estado} compacto />
         {casoAbierto(s) && <Insignia tono="mal" texto="Caso de soporte abierto" />}
       </View>
     </Pressable>

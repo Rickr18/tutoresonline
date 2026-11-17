@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Alert, Button, Card, Flex, Form, Input, Steps, Typography } from 'antd';
 import { api, type Usuario } from '../api';
 import { useSesion } from '../sesion';
-import { Alerta, mensajeDe } from '../ui';
+import { MarcaLogo, Alerta, mensajeDe } from '../ui';
 
 type Paso1 = { email: string };
 type Paso2 = { codigo: string; nueva: string; repetir: string };
@@ -33,8 +33,7 @@ export default function Recuperar() {
     <Flex justify="center" align="center" style={{ minHeight: '100vh', padding: '24px 16px' }}>
       <Card style={{ maxWidth: 460, width: '100%' }}>
         <Link to="/" className="marca" style={{ marginBottom: 18 }}>
-          <span className="logo">T</span>
-          <span className="nombre">Tutores<em>On-Line</em></span>
+          <MarcaLogo />
         </Link>
         <Typography.Title level={3} style={{ marginTop: 0 }}>Recuperar la contraseña</Typography.Title>
         <Steps size="small" current={enviado ? 1 : 0} style={{ marginBottom: 20 }}

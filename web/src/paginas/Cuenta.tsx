@@ -4,6 +4,7 @@ import { api, type Usuario } from '../api';
 import { useSesion } from '../sesion';
 import { Cabecera } from '../comunes';
 import { mensajeDe } from '../ui';
+import { color } from '../tokens';
 import { fechaHora, iniciales, ROL_TEXTO } from '../formato';
 import { Link } from 'react-router-dom';
 import { MARINO } from '../tema';
@@ -78,7 +79,7 @@ export default function Cuenta() {
         <Col xs={24} md={12}>
           <Card>
             <Flex gap={18} align="center">
-              <Avatar size={64} style={{ background: '#e9edf3', color: MARINO, fontWeight: 700, fontSize: 22, flex: 'none' }}>{iniciales(usuario.nombre)}</Avatar>
+              <Avatar size={64} style={{ background: color.gris, color: MARINO, fontWeight: 700, fontSize: 22, flex: 'none' }}>{iniciales(usuario.nombre)}</Avatar>
               <div>
                 <Typography.Title level={4} style={{ margin: 0 }}>{usuario.nombre}</Typography.Title>
                 <Typography.Text type="secondary">{usuario.email}</Typography.Text>

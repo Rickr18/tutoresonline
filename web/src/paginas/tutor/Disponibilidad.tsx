@@ -43,7 +43,7 @@ export default function Disponibilidad() {
           const delDia = bloques.map((b, i) => ({ b, i })).filter(({ b }) => b.diaSemana === dia);
           return (
             <Flex key={dia} className="dia" gap={14} align="center" wrap
-              style={{ padding: '12px 18px', borderTop: n ? '1px solid #e2e7ee' : undefined }}>
+              style={{ padding: '12px 18px', borderTop: n ? '1px solid var(--linea)' : undefined }}>
               <Typography.Text strong style={{ width: 90 }}>{DIAS[dia]}</Typography.Text>
               <Flex vertical gap={8} style={{ flex: 1, minWidth: 260 }}>
                 {delDia.length === 0 ? <Typography.Text type="secondary">Sin atención</Typography.Text> : delDia.map(({ b, i }) => (

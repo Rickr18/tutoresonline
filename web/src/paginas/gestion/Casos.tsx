@@ -7,6 +7,7 @@ import { api, type Caso } from '../../api';
 import { useSesion } from '../../sesion';
 import { Cabecera } from '../../comunes';
 import { Alerta, Insignia, mensajeDe } from '../../ui';
+import { color, TONOS } from '../../tokens';
 import { DECISION, dinero, ESTADO_CASO, haceCuanto, ROL_TEXTO } from '../../formato';
 
 type Vista = 'sin-asignar' | 'mios' | 'escalados' | 'abiertos' | 'resueltos';
@@ -68,7 +69,7 @@ export default function Casos() {
       <Tabs activeKey={activa} onChange={(k) => setVista(k as Vista)} style={{ marginTop: 8 }}
         items={(Object.keys(filtros) as Vista[]).map((v) => ({
           key: v,
-          label: <Flex gap={8} align="center">{filtros[v].texto}<Badge count={lista.filter(filtros[v].filtro).length} showZero color="#e9edf3" style={{ color: '#4a5567' }} /></Flex>,
+          label: <Flex gap={8} align="center">{filtros[v].texto}<Badge count={lista.filter(filtros[v].filtro).length} showZero color={color.gris} style={{ color: TONOS.neutro.texto }} /></Flex>,
         }))} />
 
       {casos.isError && <Alerta>{mensajeDe(casos.error)}</Alerta>}

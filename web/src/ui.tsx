@@ -1,9 +1,10 @@
 /* Componentes de interfaz compartidos, construidos sobre Ant Design. Conservan la misma API que usan las páginas. */
 import { cloneElement, useEffect, useState, type ReactElement, type ReactNode } from 'react';
-import { Alert, Avatar as AvatarAntd, Badge, Card, Empty, Flex, Form, Input, Modal as ModalAntd, Progress, Rate, Segmented, Spin, Statistic, Tag, Typography } from 'antd';
-import { StarFilled } from '@ant-design/icons';
+import { Alert, Avatar as AvatarAntd, Card, Empty, Flex, Form, Input, Modal as ModalAntd, Progress, Rate, Segmented, Spin, Statistic, Tag, Typography } from 'antd';
+import { StarFilled, InboxOutlined } from '@ant-design/icons';
 import { iniciales } from './formato';
 import { AMBAR, MARINO } from './tema';
+import { color, TONOS, type Tono } from './tokens';
 
 export function Estrellas({ valor, total, grande }: { valor: number | null; total?: number; grande?: boolean }) {
   if (valor === null) return <Typography.Text type="secondary" className="estrellas vacias">Sin calificaciones</Typography.Text>;
@@ -28,29 +29,50 @@ export function SelectorEstrellas({ valor, cambiar }: { valor: number; cambiar: 
   );
 }
 
-const COLOR_TONO: Record<string, string> = { espera: 'gold', bien: 'green', activo: 'blue', neutro: 'default', mal: 'red' };
-
+/** Píldora de estado con el fondo y el texto del tono (tokens.ts). */
 export function Insignia({ tono, children }: { tono: string; children: ReactNode }) {
-  return <Tag color={COLOR_TONO[tono] ?? 'default'} className={`insignia ${tono}`} style={{ marginInlineEnd: 0 }}>{children}</Tag>;
+  const t = TONOS[(tono in TONOS ? tono : 'neutro') as Tono];
+  return (
+    <Tag className={`insignia ${tono}`} variant="filled"
+      style={{ marginInlineEnd: 0, background: t.fondo, color: t.texto, borderRadius: 999, fontWeight: 600, paddingInline: 10 }}>
+      {children}
+    </Tag>
+  );
+}
+
+/** Punto verde con halo que late despacio: el tutor está en línea. Con movimiento reducido no se anima. */
+export function Pulso({ tamano = 8 }: { tamano?: number }) {
+  return <span className="pulso" role="img" aria-label="En línea" style={{ width: tamano, height: tamano }} />;
 }
 
 export function Avatar({ nombre, enLinea, grande }: { nombre: string; enLinea?: boolean; grande?: boolean }) {
   const avatar = (
     <AvatarAntd size={grande ? 64 : 36} className="avatar" aria-hidden
-      style={{ background: '#e9edf3', color: MARINO, fontWeight: 700, fontSize: grande ? 22 : 14, flex: 'none' }}>
+      style={{ background: color.gris, color: MARINO, fontWeight: 700, fontSize: grande ? 22 : 14, flex: 'none' }}>
       {iniciales(nombre)}
     </AvatarAntd>
   );
-  return enLinea === undefined ? avatar : <Badge dot={enLinea} color="#1c8c7c" offset={[-4, 30]}>{avatar}</Badge>;
+  if (!enLinea) return avatar;
+  return <span className="avatar-linea">{avatar}<span className="avatar-pulso"><Pulso tamano={grande ? 14 : 10} /></span></span>;
+}
+
+/** Marca con la "T" ámbar. Un solo componente para el marco, el acceso y las páginas públicas. */
+export function MarcaLogo({ clara }: { clara?: boolean }) {
+  return (
+    <span className={`marca-logo${clara ? ' clara' : ''}`}>
+      <span className="logo">T</span>
+      <span className="nombre">Tutores<em>On-Line</em></span>
+    </span>
+  );
 }
 
 export function Cargando({ texto = 'Cargando…' }: { texto?: string }) {
-  return <Flex className="cargando" gap={10} align="center" style={{ padding: 24, color: '#5f6b7c' }}><Spin size="small" />{texto}</Flex>;
+  return <Flex className="cargando" gap={10} align="center" style={{ padding: 24, color: color.tenue }}><Spin size="small" />{texto}</Flex>;
 }
 
-export function Vacio({ titulo, children }: { titulo: string; children?: ReactNode }) {
+export function Vacio({ titulo, children, icono }: { titulo: string; children?: ReactNode; icono?: ReactNode }) {
   return (
-    <Empty className="vacio" image={Empty.PRESENTED_IMAGE_SIMPLE} description={
+    <Empty className="vacio" image={<span className="vacio-icono" aria-hidden>{icono ?? <InboxOutlined />}</span>} description={
       <><Typography.Text strong>{titulo}</Typography.Text>{children && <><br /><Typography.Text type="secondary">{children}</Typography.Text></>}</>
     } />
   );
@@ -70,9 +92,9 @@ export function Kpi({ etiqueta, valor, nota, fuerte }: { etiqueta: ReactNode; va
   return (
     <Card className={`kpi${fuerte ? ' fuerte' : ''}`} size="small" style={fuerte ? { background: MARINO, borderColor: MARINO } : undefined}>
       {/* formatter muestra el valor tal cual: puede traer íconos (la estrella de la calificación), no solo números. */}
-      <Statistic title={<span style={fuerte ? { color: '#c4cfe0' } : undefined}>{etiqueta}</span>} value={0} formatter={() => valor}
+      <Statistic title={<span className="rotulo" style={fuerte ? { color: '#c4cfe0' } : undefined}>{etiqueta}</span>} value={0} formatter={() => valor}
         styles={{ content: { fontWeight: 700, color: fuerte ? '#fff' : MARINO } }} />
-      {nota && <Typography.Text style={{ fontSize: 12, color: fuerte ? '#a9b6cb' : '#5f6b7c' }}>{nota}</Typography.Text>}
+      {nota && <Typography.Text style={{ fontSize: 12, color: fuerte ? '#a9b6cb' : color.tenue }}>{nota}</Typography.Text>}
     </Card>
   );
 }
@@ -99,6 +121,28 @@ export function Campo({ etiqueta, id, ayuda, children }: { etiqueta: ReactNode; 
   );
 }
 
+const PASOS_RIEL: Record<'PROGRAMADA' | 'BAJO_DEMANDA', string[]> = {
+  PROGRAMADA: ['Solicitada', 'Confirmada', 'En curso', 'Finalizada'],
+  BAJO_DEMANDA: ['Buscando tutor', 'Tutor asignado', 'En curso', 'Finalizada'],
+};
+const AVANCE_RIEL: Record<string, number> = { PENDIENTE_ACEPTACION: 0, BUSCANDO_TUTOR: 0, CONFIRMADA: 1, EN_CURSO: 2, FINALIZADA: 3 };
+
+/** Los cuatro pasos de una sesión unidos por una línea. `compacto` deja solo los puntos (fila de sesión). Sin avance (cancelada, sin tutor…) no dibuja nada. */
+export function RielSesion({ tipo, estado, compacto }: { tipo: 'PROGRAMADA' | 'BAJO_DEMANDA'; estado: string; compacto?: boolean }) {
+  const actual = AVANCE_RIEL[estado];
+  if (actual === undefined) return null;
+  return (
+    <ol className={`riel${compacto ? ' compacto' : ''}`} aria-label={`Avance: ${PASOS_RIEL[tipo][actual]}`}>
+      {PASOS_RIEL[tipo].map((p, i) => (
+        <li key={p} className={i < actual || estado === 'FINALIZADA' ? 'hecho' : i === actual ? 'actual' : ''} aria-current={i === actual ? 'step' : undefined}>
+          <span className="punto" aria-hidden />
+          {!compacto && <span className="paso">{p}</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /** Segundos que faltan para una fecha; se actualiza cada 250 ms. */
 export function useCuentaAtras(hasta: string | null) {
   const [ahora, setAhora] = useState(Date.now());
@@ -115,7 +159,7 @@ export function Reloj({ hasta, total = 45, gigante }: { hasta: string; total?: n
   return (
     <span className={`reloj${gigante ? ' gigante' : ''}${seg <= 10 ? ' urgente' : ''}`} role="timer" aria-label={`${seg} segundos`}>
       <Progress type="circle" size={gigante ? 120 : 60} percent={Math.min(100, (seg / total) * 100)}
-        strokeColor={seg <= 10 ? '#c0392b' : AMBAR} format={() => <b style={{ color: MARINO }}>{seg}</b>} />
+        strokeColor={seg <= 10 ? color.rojo : AMBAR} format={() => <b style={{ color: MARINO }}>{seg}</b>} />
     </span>
   );
 }

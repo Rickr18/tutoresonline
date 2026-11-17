@@ -61,16 +61,6 @@ export default function InicioEstudiante() {
         </Space>
       )}
 
-      {sesiones.data && (
-        <Kpis>
-          <Kpi fuerte etiqueta="Próximas sesiones" valor={proximas.length} nota="confirmadas o en curso" />
-          <Kpi etiqueta="Esperando tutor" valor={esperando.length} nota="reservas y solicitudes sin respuesta" />
-          <Kpi etiqueta="Por calificar" valor={porCalificar.length} nota="sesiones terminadas" />
-          <Kpi etiqueta="Casos abiertos" valor={casos.length} nota="con soporte" />
-          <Kpi etiqueta="Total invertido" valor={dinero(invertido)} nota="descontando devoluciones" />
-        </Kpis>
-      )}
-
       {nada && (
         <div className="seccion">
           <Vacio titulo="No tienes nada pendiente">Busca un tutor por materia o pide ayuda ahora mismo.</Vacio>
@@ -94,6 +84,16 @@ export default function InicioEstudiante() {
         <Seccion titulo="Esperando respuesta del tutor">
           <div className="lista">{esperando.map((s) => <FilaSesion key={s.id} s={s} />)}</div>
         </Seccion>
+      )}
+
+      {sesiones.data && (
+        <div className="seccion"><Kpis>
+          <Kpi fuerte etiqueta="Próximas sesiones" valor={proximas.length} nota="confirmadas o en curso" />
+          <Kpi etiqueta="Esperando tutor" valor={esperando.length} nota="reservas y solicitudes sin respuesta" />
+          <Kpi etiqueta="Por calificar" valor={porCalificar.length} nota="sesiones terminadas" />
+          <Kpi etiqueta="Casos abiertos" valor={casos.length} nota="con soporte" />
+          <Kpi etiqueta="Total invertido" valor={dinero(invertido)} nota="descontando devoluciones" />
+        </Kpis></div>
       )}
     </>
   );

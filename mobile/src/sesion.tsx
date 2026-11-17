@@ -46,6 +46,8 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   const avisar = useCallback<Contexto['avisar']>((titulo, tono = 'info', cuerpo) => mostrar({ titulo, tono, cuerpo }), [mostrar]);
 
   const salir = useCallback(() => {
+    // Corta las consultas en curso y vacía la caché privada; ProveedorNav se desmonta y la pila de pantallas se pierde.
+    void qc.cancelQueries();
     almacen.guardarToken(null);
     setUsuario(null);
     qc.clear();

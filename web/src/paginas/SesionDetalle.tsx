@@ -1,18 +1,14 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Card, Col, Descriptions, Flex, Form, Input, List, Row, Select, Space, Steps, Typography } from 'antd';
+import { Button, Card, Col, Descriptions, Flex, Form, Input, List, Row, Select, Space, Typography } from 'antd';
 import { api, type Accion, type Evento, type Mensaje, type Sesion } from '../api';
 import { useSesion } from '../sesion';
 import { cuando, useParametros } from '../comunes';
 import { Conversacion, EnlaceSala, LineaTiempo } from '../caso';
-import { Alerta, Avatar, Campo, Cargando, Estrellas, Insignia, Modal, Reloj, SelectorEstrellas, mensajeDe } from '../ui';
+import { Alerta, Avatar, Campo, Cargando, Estrellas, Insignia, Modal, Reloj, RielSesion, SelectorEstrellas, mensajeDe } from '../ui';
 import { DECISION, dinero, duracion, ESTADO_CASO, ESTADO_PAGO, ESTADO_SESION, fechaHora, haceCuanto, MODERACION } from '../formato';
 
-const PASOS: Record<Sesion['tipo'], string[]> = {
-  PROGRAMADA: ['Solicitada', 'Confirmada', 'En curso', 'Finalizada'],
-  BAJO_DEMANDA: ['Buscando tutor', 'Tutor asignado', 'En curso', 'Finalizada'],
-};
 const AVANCE: Partial<Record<Sesion['estado'], number>> = {
   PENDIENTE_ACEPTACION: 0, BUSCANDO_TUTOR: 0, CONFIRMADA: 1, EN_CURSO: 2, FINALIZADA: 4,
 };
@@ -103,7 +99,7 @@ export default function SesionDetalle() {
                 </Flex>
 
                 {avance !== undefined
-                  ? <Steps className="pasos" size="small" current={avance} status={avance >= 4 ? 'finish' : 'process'} items={PASOS[s.tipo].map((x) => ({ title: x }))} />
+                  ? <RielSesion tipo={s.tipo} estado={s.estado} />
                   : <Alerta tono="espera">{textoCierre(s)}</Alerta>}
 
                 <Descriptions size="small" column={1} items={[

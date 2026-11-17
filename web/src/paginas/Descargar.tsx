@@ -1,3 +1,4 @@
+import { MarcaLogo } from '../ui';
 import { Link } from 'react-router-dom';
 import { Alert, Button, Card, Col, Flex, Row, Steps, Typography } from 'antd';
 import { abrirAppMovil, Qr, URL_APK, urlDescarga } from '../qr';
@@ -54,8 +55,7 @@ export default function Descargar() {
     <div className="descarga">
       <header>
         <Link to="/" className="marca">
-          <span className="logo">T</span>
-          <span className="nombre">Tutores<em>On-Line</em></span>
+          <MarcaLogo />
         </Link>
       </header>
       <Typography.Title level={2} style={{ margin: 0 }}>Lleva TutoresOn-Line en tu teléfono</Typography.Title>

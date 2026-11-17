@@ -3,9 +3,13 @@
  * (fila de sesión, burbujas del chat, columnas del resumen). Los controles, tablas, tarjetas y avisos son de antd.
  */
 :root {
+  /* Mismos valores que web/src/tokens.ts. */
   --marino: #12233f;
+  --marino-profundo: #0c1830;
   --marino-2: #1b3358;
   --ambar: #f2a33a;
+  --ambar-tinta: #2a1c02;
+  --ambar-papel: #fff6e6;
   --verde: #1c8c7c;
   --rojo: #c0392b;
   --tinta: #1a2433;
@@ -13,8 +17,9 @@
   --linea: #e2e7ee;
   --fondo: #f4f6f9;
   --papel: #ffffff;
+  --gris: #e9edf3;
   --radio: 12px;
-  --sombra: 0 1px 2px rgba(18, 35, 63, .06), 0 6px 20px rgba(18, 35, 63, .06);
+  --sombra: 0 1px 2px rgba(18, 35, 63, .06), 0 6px 20px rgba(18, 35, 63, .08);
 }
 
 * { box-sizing: border-box; }
@@ -33,9 +38,37 @@ ul { list-style: none; margin: 0; padding: 0; }
 .marca, .quien, .fila-sesion, .tutor-tarjeta, .acceso-qr { color: inherit; }
 .marca:hover, .quien:hover, .fila-sesion:hover, .tutor-tarjeta:hover, .acceso-qr:hover { text-decoration: none; }
 
-/* ---------- Marco ---------- */
-.barra { position: sticky; top: 0; z-index: 20; color: #fff; line-height: normal; }
-.barra-interior { max-width: 1180px; margin: 0 auto; padding: 0 20px; height: 62px; display: flex; align-items: center; gap: 22px; }
+/* ---------- Marco: menú lateral, cabecera, contenido y pie ---------- */
+.lateral { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: linear-gradient(180deg, var(--marino) 0%, var(--marino-profundo) 100%) !important; }
+.lateral .marca, .lateral-movil .marca { display: flex; align-items: center; height: 60px; padding: 0 20px; color: #fff; }
+.lateral.ant-layout-sider-collapsed .marca { padding: 0 20px; }
+.lateral.ant-layout-sider-collapsed .marca-logo .nombre { display: none; }
+.lateral .ant-menu, .lateral-movil .ant-menu { padding-bottom: 20px; }
+.lateral .ant-menu-item a, .lateral-movil .ant-menu-item a { color: inherit; }
+.lateral .ant-menu-item, .lateral-movil .ant-menu-item { position: relative; margin-inline: 8px; width: calc(100% - 16px); }
+/* Margen ámbar: la opción activa se marca como el margen de una hoja. */
+.lateral .ant-menu-item-selected::before, .lateral-movil .ant-menu-item-selected::before {
+  content: ''; position: absolute; left: -8px; top: 8px; bottom: 8px; width: 4px; border-radius: 0 4px 4px 0; background: var(--ambar);
+}
+.lateral .ant-menu-item-group-title, .lateral-movil .ant-menu-item-group-title { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #8294b0; padding: 14px 20px 6px; }
+.lateral .opcion-destacada, .lateral-movil .opcion-destacada { background: var(--ambar); color: var(--ambar-tinta) !important; font-weight: 700; margin-block: 6px; }
+.lateral .opcion-destacada:hover, .lateral-movil .opcion-destacada:hover { background: #f5b457 !important; color: var(--ambar-tinta) !important; }
+.lateral .opcion-destacada a, .lateral-movil .opcion-destacada a { color: var(--ambar-tinta); }
+.lateral-movil .ant-drawer-body { padding: 0; background: var(--marino); }
+.lateral-movil .ant-drawer-content { background: var(--marino); }
+.barra { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px !important; background: var(--papel) !important; border-bottom: 1px solid var(--linea); line-height: normal; }
+.migas { min-width: 0; }
+.migas ol { flex-wrap: nowrap; }
+.quien { display: flex; align-items: center; gap: 9px; color: var(--tinta); background: none; border: 0; padding: 4px 6px; border-radius: 10px; cursor: pointer; font: inherit; text-align: left; }
+.quien:hover { background: var(--fondo); }
+.quien:focus-visible, .barra .ant-btn:focus-visible { outline: 2px solid var(--marino-2); outline-offset: 2px; }
+.quien .datos { display: flex; flex-direction: column; line-height: 1.2; }
+.quien .datos b { font-size: .9rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quien .datos small { color: var(--tenue); font-size: .76rem; }
+.contenido { max-width: 1180px; width: 100%; margin: 0 auto; padding: 28px 20px 40px; }
+.pie-marco { background: transparent !important; color: var(--tenue); font-size: 13px; padding: 14px 20px 20px; max-width: 1180px; width: 100%; margin: 0 auto; border-top: 1px solid var(--linea); }
+.pie-marco a { color: var(--tenue); }
+.pie-marco a:hover { color: var(--marino); }
 .marca { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; flex: none; }
 .marca .logo {
   width: 32px; height: 32px; border-radius: 9px; background: var(--ambar); color: var(--marino);
@@ -43,12 +76,6 @@ ul { list-style: none; margin: 0; padding: 0; }
 }
 .marca .nombre { font-size: 1.05rem; letter-spacing: -.01em; }
 .marca .nombre em { font-style: normal; color: var(--ambar); }
-.barra .marca { color: #fff; }
-.quien { display: flex; align-items: center; gap: 9px; color: #fff; }
-.quien .datos { display: flex; flex-direction: column; line-height: 1.2; }
-.quien .datos b { font-size: .9rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.quien .datos small { color: #a9b6cb; font-size: .76rem; }
-.contenido { max-width: 1180px; width: 100%; margin: 0 auto; padding: 28px 20px 64px; }
 .pantalla-completa { min-height: 100vh; display: grid; place-items: center; }
 
 /* Avisos flotantes (alertas de antd apiladas en la esquina). */
@@ -94,6 +121,41 @@ ul { list-style: none; margin: 0; padding: 0; }
 .solicitud { border-left: 4px solid var(--ambar); }
 .fila-clic { cursor: pointer; }
 
+/* ---------- Rasgos de la marca (docs/DESIGN_SYSTEM.md) ---------- */
+.rotulo { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.marca-logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; }
+.marca-logo .logo { width: 32px; height: 32px; border-radius: 9px; background: var(--ambar); color: var(--marino); display: grid; place-items: center; font-weight: 800; font-size: 1.1rem; }
+.marca-logo .nombre { font-size: 1.05rem; letter-spacing: -.01em; }
+.marca-logo .nombre em { font-style: normal; color: var(--ambar); }
+.marca .marca-logo { color: inherit; }
+
+/* Pulso de disponibilidad: punto verde con halo que late despacio. */
+.pulso { display: inline-block; border-radius: 50%; background: var(--verde); box-shadow: 0 0 0 0 rgba(28, 140, 124, .45); animation: late 2s ease-out infinite; flex: none; }
+@keyframes late { 70% { box-shadow: 0 0 0 7px rgba(28, 140, 124, 0); } 100% { box-shadow: 0 0 0 0 rgba(28, 140, 124, 0); } }
+.avatar-linea { position: relative; display: inline-flex; flex: none; }
+.avatar-pulso { position: absolute; right: -1px; bottom: -1px; display: inline-flex; padding: 2px; background: var(--papel); border-radius: 50%; }
+
+/* Riel de la sesión: cuatro pasos unidos por una línea. */
+.riel { display: flex; margin: 0; padding: 0; list-style: none; width: 100%; }
+.riel li { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; position: relative; min-width: 0; font-size: 13px; color: var(--tenue); }
+.riel li::before { content: ''; position: absolute; top: 5px; left: 12px; right: -2px; height: 2px; background: var(--linea); }
+.riel li:last-child::before { display: none; }
+.riel .punto { width: 12px; height: 12px; border-radius: 50%; background: var(--papel); border: 2px solid #c5cedb; position: relative; z-index: 1; }
+.riel li.hecho .punto { background: var(--verde); border-color: var(--verde); }
+.riel li.hecho::before { background: var(--verde); }
+.riel li.actual .punto { background: var(--ambar); border-color: var(--ambar); }
+.riel li.actual .paso { color: var(--tinta); font-weight: 700; }
+.riel.compacto { width: 76px; margin-top: 4px; }
+.riel.compacto li::before { top: 4px; left: 9px; }
+.riel.compacto .punto { width: 10px; height: 10px; border-width: 2px; }
+
+/* Estado vacío con personalidad: ícono ámbar sobre un círculo cálido. */
+.vacio-icono { display: inline-grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--ambar-papel); color: #b86b00; font-size: 24px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pulso, .avisos .aviso { animation: none; }
+}
+
 /* ---------- Fila de sesión ---------- */
 .lista { display: grid; gap: 10px; }
 .fila-sesion {
@@ -101,6 +163,8 @@ ul { list-style: none; margin: 0; padding: 0; }
   background: var(--papel); border: 1px solid var(--linea); border-radius: var(--radio); padding: 13px 16px; transition: box-shadow .15s, border-color .15s;
 }
 .fila-sesion:hover { border-color: #c5cedb; box-shadow: var(--sombra); }
+.fila-sesion.pide-accion { border-left: 4px solid var(--ambar); }
+.fila-sesion:focus-visible, .tutor-tarjeta:focus-visible { outline: 2px solid var(--marino-2); outline-offset: 2px; }
 .fila-sesion > span { display: flex; flex-direction: column; min-width: 0; }
 .fila-sesion > span > span { color: var(--tenue); font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fila-sesion .precio { font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -127,21 +191,22 @@ ul { list-style: none; margin: 0; padding: 0; }
 .burbuja.interna.mia { background: #f6e3b8; }
 .burbuja.interna.mia small { color: #7a5b1c; }
 .burbuja.mia .ant-typography { color: #b9c5d9; }
+.nota-interna { color: #7a5b1c; }
 .redactar { border-top: 1px solid var(--linea); padding-top: 10px; }
 
 /* ---------- Pantallas angostas ---------- */
 @media (max-width: 980px) {
   .quien .datos { display: none; }
-  .interruptor .rotulo { display: none; }
+  .interruptor .etiqueta-linea { display: none; }
 }
 @media (max-width: 760px) {
   .acceso { grid-template-columns: 1fr; }
   .acceso-marca { padding: 36px 24px; }
   .acceso-marca ul, .acceso-qr { display: none; }
   .descarga-movil { display: block; }
-  .barra-interior { flex-wrap: wrap; height: auto; padding: 10px 14px 0; gap: 0 12px; }
-  .barra-derecha { margin-left: auto; }
-  .barra .menu { order: 3; flex-basis: 100%; line-height: 44px; }
+
+
+
   .contenido { padding: 20px 14px 56px; }
   .fila-sesion { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 6px; }
   .fila-sesion .cuando { grid-column: 2 / 3; }

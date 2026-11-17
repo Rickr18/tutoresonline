@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Flex, Space, Typography } from 'antd';
 import { api, type Materia, type Parametros, type Sesion } from './api';
 import { useSesion } from './sesion';
-import { Avatar, Insignia } from './ui';
+import { Avatar, Insignia, RielSesion } from './ui';
 import { dinero, duracion, ESTADO_SESION, fechaHora } from './formato';
 
 export function useMaterias() {
@@ -45,6 +45,9 @@ export function cuando(s: Sesion) {
   return s.inicio ? fechaHora(s.inicio) : `Pedida ${fechaHora(s.creadoEn).toLowerCase()}`;
 }
 
+/** Acciones que le piden algo a quien mira la sesión: la fila lleva el margen ámbar. */
+const PIDE_ACCION = ['aceptar', 'iniciar', 'calificar', 'responder-reprogramacion'];
+
 /** La sesión tiene una disputa sin resolver: el pago está congelado y hay conversación con soporte. */
 export const casoAbierto = (s: Sesion) => !!s.disputa && s.disputa.estado !== 'RESUELTA';
 
@@ -54,11 +57,12 @@ export function FilaSesion({ s }: { s: Sesion }) {
   const otro = soyTutor ? s.estudiante.nombre : s.tutor?.nombre ?? 'Tutor por asignar';
   const e = ESTADO_SESION[s.estado];
   return (
-    <Link to={`/sesiones/${s.id}`} className="fila-sesion">
+    <Link to={`/sesiones/${s.id}`} className={`fila-sesion${s.acciones.some((a) => PIDE_ACCION.includes(a)) ? " pide-accion" : ""}`}>
       <Avatar nombre={otro} />
       <span>
         <b>{s.materia.nombre}</b>
         <span>{otro} · {s.tema}</span>
+        <RielSesion tipo={s.tipo} estado={s.estado} compacto />
       </span>
       <span className="cuando">
         <b>{cuando(s)}</b>

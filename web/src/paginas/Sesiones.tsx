@@ -5,6 +5,7 @@ import type { EstadoSesion, Sesion } from '../api';
 import { useSesion } from '../sesion';
 import { Cabecera, FilaSesion, casoAbierto, useSesiones } from '../comunes';
 import { Alerta, Cargando, Vacio, mensajeDe } from '../ui';
+import { color, TONOS } from '../tokens';
 
 const ACTIVAS: EstadoSesion[] = ['PENDIENTE_ACEPTACION', 'BUSCANDO_TUTOR', 'CONFIRMADA', 'EN_CURSO'];
 
@@ -22,7 +23,7 @@ export default function Sesiones() {
   const historial = (sesiones.data ?? []).filter((s) => !esActiva(s))
     .sort((a, b) => Date.parse(b.inicio ?? b.creadoEn) - Date.parse(a.inicio ?? a.creadoEn));
   const lista = pestana === 'activas' ? activas : historial;
-  const rotulo = (texto: string, n: number) => <Flex gap={8} align="center">{texto}<Badge count={n} showZero color="#e9edf3" style={{ color: '#4a5567' }} /></Flex>;
+  const rotulo = (texto: string, n: number) => <Flex gap={8} align="center">{texto}<Badge count={n} showZero color={color.gris} style={{ color: TONOS.neutro.texto }} /></Flex>;
 
   return (
     <>

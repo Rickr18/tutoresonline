@@ -2,12 +2,12 @@
 
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Flex, Typography } from 'antd';
+import { MarcaLogo } from './ui';
 
 export function Marca({ clara }: { clara?: boolean }) {
   return (
     <Link to="/" className={`marca${clara ? ' clara' : ''}`}>
-      <span className="logo">T</span>
-      <span className="nombre">Tutores<em>On-Line</em></span>
+      <MarcaLogo clara={clara} />
     </Link>
   );
 }

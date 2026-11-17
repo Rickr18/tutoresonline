@@ -4,7 +4,8 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Button, Card, Checkbox, Col, Flex, Input, Row, Select, Tag, Typography } from 'antd';
 import { api, consulta, type Tutor } from '../../api';
 import { Cabecera, useMaterias } from '../../comunes';
-import { Alerta, Avatar, Campo, Cargando, Estrellas, Vacio, mensajeDe } from '../../ui';
+import { Alerta, Avatar, Campo, Cargando, Estrellas, Pulso, Vacio, mensajeDe } from '../../ui';
+import { color } from '../../tokens';
 import { dinero, MODALIDAD } from '../../formato';
 
 const INICIAL = { q: '', materia: '', modalidad: '', precioMax: '', orden: '', enLinea: false, calificacionMin: '' };
@@ -26,7 +27,7 @@ export function TarjetaTutor({ t }: { t: Tutor }) {
         <Flex justify="space-between" align="center" style={{ marginTop: 'auto' }}>
           <span><b>{dinero(t.tarifaHora)}</b> <Typography.Text type="secondary">por hora</Typography.Text></span>
           {t.enLinea
-            ? <Typography.Text style={{ color: '#1c8c7c', fontWeight: 600 }}>● En línea</Typography.Text>
+            ? <Flex gap={6} align="center"><Pulso /><Typography.Text style={{ color: color.verde, fontWeight: 600 }}>En línea</Typography.Text></Flex>
             : <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t.sesionesRealizadas} sesiones</Typography.Text>}
         </Flex>
       </Card>

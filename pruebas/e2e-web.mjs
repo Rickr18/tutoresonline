@@ -422,6 +422,36 @@ try {
     ok('registro solo con la casilla de términos marcada; las páginas legales cargan sin sesión');
   }
 
+  // Rutas protegidas y cierre de sesión
+  {
+    const jefe = await abrir('rick@tutores.co');
+    await jefe.goto(`${URL}/admin/usuarios`);
+    await jefe.reload();
+    await jefe.locator('table').waitFor();
+    ok('recargar una ruta interna con sesión abierta la conserva');
+
+    await jefe.goto(`${URL}/gestion/sesiones`);
+    await jefe.locator('table').waitFor();
+    await jefe.getByRole('button', { name: 'Menú de la cuenta' }).click();
+    await jefe.getByText('Cerrar sesión', { exact: true }).click();
+    await jefe.waitForURL((u) => u.pathname === '/');
+    await jefe.locator('.inicio-publico').waitFor();
+    if (await jefe.evaluate(() => localStorage.getItem('tutoresonline.token'))) throw new Error('El token sigue guardado después de cerrar sesión');
+    await jefe.goBack();
+    await jefe.locator('.acceso').waitFor();
+    if (await jefe.locator('.barra, .kpi, table').count()) throw new Error('Atrás muestra contenido privado después de cerrar sesión');
+    ok('cerrar sesión desde /gestion/sesiones deja la URL en / y Atrás no muestra nada privado');
+
+    const alumna = await abrir('ana@demo.co');
+    await alumna.goto(`${URL}/admin`);
+    await alumna.getByText('No tienes acceso a esta página').waitFor();
+    await alumna.goto(`${URL}/esta-ruta-no-existe`);
+    await alumna.getByText('No encontramos esta página').waitFor();
+    await alumna.getByRole('button', { name: 'Ir a mi inicio' }).click();
+    await alumna.waitForURL(/\/inicio$/);
+    ok('una ruta de otro rol muestra 403, una inexistente 404, y el botón lleva al inicio del rol');
+  }
+
   // Pantalla angosta
   await ana.setViewportSize({ width: 390, height: 844 });
   await ana.goto(`${URL}/buscar`);

@@ -7,9 +7,7 @@ import { Alerta, Cargando, Estrellas, Insignia, mensajeDe } from '../../ui';
 import { ESTADO_CASO, fechaHora } from '../../formato';
 import { FichaSesion } from './piezas';
 
-export default function SesionEquipoDetalle() {
-  const { id } = useParams();
-  const volver = useNavigate();
+export function DetalleSesionEquipo({ id, una }: { id: string | number; una?: boolean }) {
   const sesion = useQuery({ queryKey: ['gestion', 'sesion', id], queryFn: () => api<SesionEquipo>(`/gestion/sesiones/${id}`), refetchInterval: 15_000 });
 
   if (sesion.isPending) return <Cargando />;
@@ -18,9 +16,8 @@ export default function SesionEquipoDetalle() {
 
   return (
     <>
-      <Button type="link" onClick={() => volver(-1)} style={{ padding: 0, marginBottom: 14 }}>← Volver</Button>
       <Row gutter={[20, 20]}>
-        <Col xs={24} lg={14}>
+        <Col xs={24} lg={una ? 24 : 14}>
           <Space orientation="vertical" size={20} style={{ width: '100%' }}>
             <FichaSesion s={s} />
             {s.disputaId && s.estadoDisputa && (
@@ -46,7 +43,7 @@ export default function SesionEquipoDetalle() {
             </Card>
           </Space>
         </Col>
-        <Col xs={24} lg={10}>
+        <Col xs={24} lg={una ? 24 : 10}>
           <Card title="Qué pasó, minuto a minuto">
             <Typography.Paragraph type="secondary" style={{ fontSize: 13 }}>
               Cada cambio de estado, pago, apertura de la sala y gestión de soporte, con la hora exacta en hora de Colombia.
@@ -55,6 +52,17 @@ export default function SesionEquipoDetalle() {
           </Card>
         </Col>
       </Row>
+    </>
+  );
+}
+
+export default function SesionEquipoDetalle() {
+  const { id } = useParams();
+  const volver = useNavigate();
+  return (
+    <>
+      <Button type="link" onClick={() => volver(-1)} style={{ padding: 0, marginBottom: 14 }}>← Volver</Button>
+      <DetalleSesionEquipo id={id!} />
     </>
   );
 }

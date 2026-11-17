@@ -1,9 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View,
+  ActivityIndicator, Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View,
   type StyleProp, type TextInputProps, type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { C, e, TONOS } from './tema';
 import { iniciales } from './formato';
 
@@ -43,14 +44,79 @@ export function Insignia({ tono, texto }: { tono: string; texto: string }) {
   );
 }
 
+/** Punto verde con halo que late despacio: el tutor está en línea. */
+export function Pulso({ tamano = 10 }: { tamano?: number }) {
+  const onda = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const anim = Animated.loop(Animated.timing(onda, { toValue: 1, duration: 2000, useNativeDriver: Platform.OS !== 'web' }));
+    anim.start();
+    return () => anim.stop();
+  }, [onda]);
+  return (
+    <View accessibilityRole="image" accessibilityLabel="En línea" style={{ width: tamano, height: tamano, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View style={{
+        position: 'absolute', width: tamano, height: tamano, borderRadius: tamano, backgroundColor: C.verde,
+        opacity: onda.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
+        transform: [{ scale: onda.interpolate({ inputRange: [0, 1], outputRange: [1, 2.2] }) }],
+      }} />
+      <View style={{ width: tamano, height: tamano, borderRadius: tamano, backgroundColor: C.verde }} />
+    </View>
+  );
+}
+
 export function Avatar({ nombre, enLinea, grande }: { nombre: string; enLinea?: boolean; grande?: boolean }) {
   const lado = grande ? 64 : 40;
   return (
-    <View style={{ width: lado, height: lado, borderRadius: lado / 2, backgroundColor: '#dfe6f1', alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: lado, height: lado, borderRadius: lado / 2, backgroundColor: C.gris, alignItems: 'center', justifyContent: 'center' }}>
       <Text style={{ color: C.marino, fontWeight: '800', fontSize: grande ? 22 : 14 }}>{iniciales(nombre)}</Text>
       {enLinea && (
-        <View style={{ position: 'absolute', right: 0, bottom: 0, width: grande ? 15 : 11, height: grande ? 15 : 11, borderRadius: 8, backgroundColor: '#2fbf71', borderWidth: 2, borderColor: '#fff' }} />
+        <View style={{ position: 'absolute', right: -1, bottom: -1, padding: 2, backgroundColor: '#fff', borderRadius: 10 }}>
+          <Pulso tamano={grande ? 12 : 9} />
+        </View>
       )}
+    </View>
+  );
+}
+
+/** Marca con la "T" ámbar; la misma que en la web. */
+export function MarcaLogo({ tamano = 38 }: { tamano?: number }) {
+  return (
+    <View style={e.fila}>
+      <View style={{ width: tamano, height: tamano, borderRadius: 10, backgroundColor: C.ambar, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontWeight: '900', fontSize: tamano / 1.9, color: C.marino }}>T</Text>
+      </View>
+      <Text style={{ color: '#fff', fontSize: tamano / 1.8, fontWeight: '800' }}>Tutores<Text style={{ color: C.ambar }}>On-Line</Text></Text>
+    </View>
+  );
+}
+
+const PASOS_RIEL = {
+  PROGRAMADA: ['Solicitada', 'Confirmada', 'En curso', 'Finalizada'],
+  BAJO_DEMANDA: ['Buscando tutor', 'Tutor asignado', 'En curso', 'Finalizada'],
+} as const;
+const AVANCE_RIEL: Record<string, number> = { PENDIENTE_ACEPTACION: 0, BUSCANDO_TUTOR: 0, CONFIRMADA: 1, EN_CURSO: 2, FINALIZADA: 3 };
+
+/** Los cuatro pasos de una sesión unidos por una línea. `compacto` deja solo los puntos. Sin avance (cancelada, sin tutor…) no dibuja nada. */
+export function RielSesion({ tipo, estado, compacto }: { tipo: 'PROGRAMADA' | 'BAJO_DEMANDA'; estado: string; compacto?: boolean }) {
+  const actual = AVANCE_RIEL[estado];
+  if (actual === undefined) return null;
+  const pasos = PASOS_RIEL[tipo];
+  const lado = compacto ? 9 : 12;
+  return (
+    <View style={{ flexDirection: 'row', width: compacto ? 70 : '100%', marginTop: compacto ? 3 : 0 }} accessibilityLabel={`Avance: ${pasos[actual]}`}>
+      {pasos.map((p, i) => {
+        const hecho = i < actual || estado === 'FINALIZADA';
+        const color = hecho ? C.verde : i === actual ? C.ambar : '#c5cedb';
+        return (
+          <View key={p} style={{ flex: 1, gap: 5 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: lado, height: lado, borderRadius: lado, backgroundColor: hecho || i === actual ? color : '#fff', borderWidth: 2, borderColor: color }} />
+              {i < pasos.length - 1 && <View style={{ flex: 1, height: 2, backgroundColor: hecho ? C.verde : C.linea }} />}
+            </View>
+            {!compacto && <Text style={{ fontSize: 11.5, color: i === actual ? C.tinta : C.tenue, fontWeight: i === actual ? '700' : '400' }} numberOfLines={1}>{p}</Text>}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -173,7 +239,7 @@ export function useCuentaAtras(hasta: string | null) {
 export function Reloj({ hasta, grande }: { hasta: string; grande?: boolean; total?: number }) {
   const seg = useCuentaAtras(hasta);
   const lado = grande ? 120 : 54;
-  const color = seg <= 10 ? C.rojo : C.verde;
+  const color = seg <= 10 ? C.rojo : C.ambar;
   return (
     <View accessibilityRole="timer" accessibilityLabel={`${seg} segundos`}
       style={{ width: lado, height: lado, borderRadius: lado / 2, borderWidth: grande ? 8 : 5, borderColor: color, alignItems: 'center', justifyContent: 'center' }}>
